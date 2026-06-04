@@ -1,0 +1,485 @@
+name: Launchpad - Build & Deploy
+
+permissions:
+  contents: write
+  packages: write
+  checks: write
+  pull-requests: write
+
+env:
+  REGISTRY: ghcr.io/rosnetdev
+  DOCKER_IMAGE_NAME: launchpad
+  SWARM_SERVICES_REPO: RosnetDev/Swarm-Services
+  SERVICE_NAME: Launchpad
+
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        description: 'Select action to perform'
+        required: true
+        type: choice
+        default: 'Build and Deploy'
+        options:
+          - Build and Deploy
+          - Build Only
+          - Deploy Only
+      deploy_to_dev:
+        description: 'Dev'
+        type: boolean
+        default: true
+        
+      version:
+        description: 'Version to deploy (Required for Deploy Only)'
+        required: false
+        type: string
+      replicas:
+        description: 'Number of replicas (optional - leave blank to keep existing)'
+        required: false
+        type: string
+
+jobs:
+  validate-inputs:
+    name: Validate Inputs
+    runs-on: ubuntu-latest
+    outputs:
+      environments: ${{ steps.build_env_list.outputs.environments }}
+      env_count: ${{ steps.build_env_list.outputs.count }}
+    steps:
+      - name: Validate Prod deployment branch
+        if: github.event.inputs.deploy_to_prod == 'true'
+        run: |
+          BRANCH="${{ github.ref }}"
+          if [[ "$BRANCH" != "refs/heads/master" && "$BRANCH" != "refs/heads/main" ]]; then
+            echo "::error::Production deployments can only be done from the main/master branch!"
+            echo "::error::Current branch: $BRANCH"
+            echo "::error::Please switch to main branch or uncheck Prod"
+            exit 1
+          fi
+          echo "Prod deployment validated: Running from main/master branch"
+
+      - name: Build environment list
+        id: build_env_list
+        run: |
+          ENVS=()
+          
+          if [[ "${{ github.event.inputs.deploy_to_dev }}" == "true" ]]; then
+            ENVS+=("Dev")
+          fi
+          
+          if [[ "${{ github.event.inputs.deploy_to_qa }}" == "true" ]]; then
+            ENVS+=("QA")
+          fi
+          
+          if [[ "${{ github.event.inputs.deploy_to_alpha }}" == "true" ]]; then
+            ENVS+=("Alpha")
+          fi
+          
+          if [[ "${{ github.event.inputs.deploy_to_prod }}" == "true" ]]; then
+            ENVS+=("Prod")
+          fi
+          
+          # Check that at least one environment is selected
+          if [ ${#ENVS[@]} -eq 0 ]; then
+            echo "::error::Please select at least one environment"
+            exit 1
+          fi
+          
+          # Convert array to JSON for matrix
+          ENV_JSON=$(printf '%s\n' "${ENVS[@]}" | jq -R . | jq -s -c .)
+          echo "environments=$ENV_JSON" >> $GITHUB_OUTPUT
+          echo "count=${#ENVS[@]}" >> $GITHUB_OUTPUT
+          
+          echo "Selected environments: ${ENVS[*]}"
+          echo "Total: ${#ENVS[@]} environment(s)"
+
+      - name: Validate Deploy Only requires version
+        if: github.event.inputs.action == 'Deploy Only'
+        run: |
+          if [[ -z "${{ github.event.inputs.version }}" ]]; then
+            echo "::error::Version is required when action is 'Deploy Only'"
+            exit 1
+          fi
+          echo "Validation passed: Deploy Only with version ${{ github.event.inputs.version }}"
+
+  build-and-push:
+    name: Build & Push Image
+    runs-on: ubuntu-latest
+    needs: validate-inputs
+    if: github.event.inputs.action != 'Deploy Only'
+    outputs:
+      semVer: ${{ steps.set_semver.outputs.semVer }}
+      primary_tag: ${{ steps.build_tags.outputs.primary_tag }}
+
+    steps:
+      - name: Generate deployment token
+        id: generate_token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.DEPLOY_APP_ID }}
+          private-key: ${{ secrets.DEPLOY_APP_PRIVATE_KEY }}
+          owner: RosnetDev
+
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ steps.generate_token.outputs.token }}
+
+      - name: Configure Git
+        run: |
+          git config user.name "rosnetdev-deployment-bot[bot]"
+          git config user.email "rosnetdev-deployment-bot[bot]@users.noreply.github.com"
+
+      - name: Check if running from a tag
+        id: check_tag
+        run: |
+          if [[ "${GITHUB_REF}" == refs/tags/* ]]; then
+            echo "is_tag=true" >> $GITHUB_OUTPUT
+            echo "semVer=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+          else
+            echo "is_tag=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install GitVersion
+        uses: gittools/actions/gitversion/setup@v3.2.1
+        if: steps.check_tag.outputs.is_tag != 'true'
+        with:
+          versionSpec: '6.0.x'
+
+      - name: Determine Version
+        id: determine_version
+        if: steps.check_tag.outputs.is_tag != 'true'
+        uses: gittools/actions/gitversion/execute@v0.11.0
+        with:
+          useConfigFile: true
+
+      - name: Set version output
+        id: set_semver
+        run: |
+          if [[ "${{ steps.check_tag.outputs.is_tag }}" == "true" ]]; then
+            echo "semVer=${{ steps.check_tag.outputs.semVer }}" >> $GITHUB_OUTPUT
+          else
+            echo "semVer=${{ steps.determine_version.outputs.semVer }}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Build environment tags
+        id: build_tags
+        run: |
+          SEMVER="${{ steps.set_semver.outputs.semVer }}"
+          BRANCH="${{ github.ref_name }}"
+          
+          # Build tag list with versioned tags for each environment + environment tags
+          TAGS=""
+          FIRST=true
+          PRIMARY=""
+          
+          if [[ "${{ github.event.inputs.deploy_to_dev }}" == "true" ]]; then
+            VERSIONED="${SEMVER}-Dev"
+            if [ "$FIRST" = true ]; then
+              TAGS="${{ env.REGISTRY }}/${{ env.DOCKER_IMAGE_NAME }}:${VERSIONED}"
+              PRIMARY="$VERSIONED"
+              FIRST=false
+            else
+              TAGS="${TAGS},${{ env.REGISTRY }}/${{ env.DOCKER_IMAGE_NAME }}:${VERSIONED}"
+            fi
+            TAGS="${TAGS},${{ env.REGISTRY }}/${{ env.DOCKER_IMAGE_NAME }}:dev"
+          fi
+          
+          if [[ "${{ github.event.inputs.deploy_to_qa }}" == "true" ]]; then
+            VERSIONED="${SEMVER}-QA"
+            if [ "$FIRST" = true ]; then
+              TAGS="${{ env.REGISTRY }}/${{ env.DOCKER_IMAGE_NAME }}:${VERSIONED}"
+              PRIMARY="$VERSIONED"
+              FIRST=false
+            else
+              TAGS="${TAGS},${{ env.REGISTRY }}/${{ env.DOCKER_IMAGE_NAME }}:${VERSIONED}"
+            fi
+            TAGS="${TAGS},${{ env.REGISTRY }}/${{ env.DOCKER_IMAGE_NAME }}:qa"
+          fi
+          
+          if [[ "${{ github.event.inputs.deploy_to_alpha }}" == "true" ]]; then
+            VERSIONED="${SEMVER}-Alpha"
+            if [ "$FIRST" = true ]; then
+              TAGS="${{ env.REGISTRY }}/${{ env.DOCKER_IMAGE_NAME }}:${VERSIONED}"
+              PRIMARY="$VERSIONED"
+              FIRST=false
+            else
+              TAGS="${TAGS},${{ env.REGISTRY }}/${{ env.DOCKER_IMAGE_NAME }}:${VERSIONED}"
+            fi
+            TAGS="${TAGS},${{ env.REGISTRY }}/${{ env.DOCKER_IMAGE_NAME }}:alpha"
+          fi
+          
+          if [[ "${{ github.event.inputs.deploy_to_prod }}" == "true" ]]; then
+            # Prod gets clean semver (no environment suffix)
+            if [ "$FIRST" = true ]; then
+              TAGS="${{ env.REGISTRY }}/${{ env.DOCKER_IMAGE_NAME }}:${SEMVER}"
+              PRIMARY="$SEMVER"
+              FIRST=false
+            else
+              TAGS="${TAGS},${{ env.REGISTRY }}/${{ env.DOCKER_IMAGE_NAME }}:${SEMVER}"
+            fi
+            TAGS="${TAGS},${{ env.REGISTRY }}/${{ env.DOCKER_IMAGE_NAME }}:prod"
+          fi
+          
+          echo "tags=$TAGS" >> $GITHUB_OUTPUT
+          echo "primary_tag=$PRIMARY" >> $GITHUB_OUTPUT
+          
+          echo "Tags to create:"
+          echo "$TAGS" | tr ',' '\n' | sed 's/^/  - /'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run tests
+        run: npm test
+        continue-on-error: true
+
+      - name: Build application
+        run: npm run build
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: Dockerfile
+          push: true
+          tags: ${{ steps.build_tags.outputs.tags }}
+
+      - name: Build Summary
+        run: |
+          ACTION="${{ github.event.inputs.action }}"
+          VERSION="${{ steps.build_tags.outputs.primary_tag }}"
+          SEMVER="${{ steps.set_semver.outputs.semVer }}"
+          
+          echo "## Build Complete" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Setting | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|---------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| **Action** | $ACTION |" >> $GITHUB_STEP_SUMMARY
+          echo "| **GitVersion** | \`$SEMVER\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Primary Tag** | \`$VERSION\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Environments** | ${{ needs.validate-inputs.outputs.env_count }} selected |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Branch** | ${{ github.ref_name }} |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### All Tags Created:" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          echo "${{ steps.build_tags.outputs.tags }}" | tr ',' '\n' >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          
+          if [[ "$ACTION" == "Build Only" ]]; then
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "### Next Steps" >> $GITHUB_STEP_SUMMARY
+            echo "To deploy this version, run this workflow again with:" >> $GITHUB_STEP_SUMMARY
+            echo "- **Action**: Deploy Only" >> $GITHUB_STEP_SUMMARY
+            echo "- **Version**: \`$VERSION\`" >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: Create release
+        uses: thomaseizinger/create-release@2.0.0
+        if: github.ref == 'refs/heads/main' && github.event.inputs.deploy_to_prod == 'true' && github.event.inputs.action != 'Build Only'
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          target_commitish: ${{ github.sha }}
+          tag_name: ${{ steps.set_semver.outputs.semVer }}
+          name: ${{ steps.set_semver.outputs.semVer }}
+          prerelease: false
+
+  deploy-environments:
+    name: Deploy to ${{ matrix.environment }}
+    runs-on: ubuntu-latest
+    needs: [validate-inputs, build-and-push]
+    if: |
+      always() && 
+      (needs.build-and-push.result == 'success' || 
+       (github.event.inputs.action == 'Deploy Only' && needs.validate-inputs.result == 'success'))
+    strategy:
+      matrix:
+        environment: ${{ fromJson(needs.validate-inputs.outputs.environments) }}
+      fail-fast: false
+    environment: ${{ matrix.environment }}
+
+    steps:
+      - name: Generate deployment token
+        id: generate_token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.DEPLOY_APP_ID }}
+          private-key: ${{ secrets.DEPLOY_APP_PRIVATE_KEY }}
+          owner: RosnetDev
+
+      - name: Determine version to deploy
+        id: set_version
+        run: |
+          if [[ "${{ github.event.inputs.action }}" == "Deploy Only" ]]; then
+            echo "version=${{ github.event.inputs.version }}" >> $GITHUB_OUTPUT
+          else
+            echo "version=${{ needs.build-and-push.outputs.primary_tag }}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Verify image exists (Deploy Only)
+        if: github.event.inputs.action == 'Deploy Only'
+        run: |
+          VERSION="${{ steps.set_version.outputs.version }}"
+          IMAGE="${{ env.REGISTRY }}/${{ env.DOCKER_IMAGE_NAME }}:${VERSION}"
+          
+          echo "Verifying image exists: $IMAGE"
+          
+          echo "${{ secrets.GITHUB_TOKEN }}" | docker login ${{ env.REGISTRY }} -u ${{ github.actor }} --password-stdin
+          
+          if docker manifest inspect "$IMAGE" > /dev/null 2>&1; then
+            echo "Image found: $IMAGE"
+          else
+            echo "::error::Image not found: $IMAGE"
+            exit 1
+          fi
+
+      - name: Map environment to folder
+        id: map_env
+        run: |
+          ENV="${{ matrix.environment }}"
+          
+          case "$ENV" in
+            Dev) echo "env_folder=dev" >> $GITHUB_OUTPUT ;;
+            QA) echo "env_folder=qa" >> $GITHUB_OUTPUT ;;
+            Alpha) echo "env_folder=alpha" >> $GITHUB_OUTPUT ;;
+            Prod) echo "env_folder=prod" >> $GITHUB_OUTPUT ;;
+          esac
+
+      - name: Checkout Swarm-Services repo
+        if: github.event.inputs.action != 'Build Only'
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ env.SWARM_SERVICES_REPO }}
+          token: ${{ steps.generate_token.outputs.token }}
+          path: swarm-services
+          ref: main
+
+      - name: Update compose file in Swarm-Services repo
+        if: github.event.inputs.action != 'Build Only'
+        run: |
+          ENV="${{ matrix.environment }}"
+          ENV_FOLDER="${{ steps.map_env.outputs.env_folder }}"
+          VERSION="${{ steps.set_version.outputs.version }}"
+          REPLICAS="${{ github.event.inputs.replicas }}"
+          NEW_IMAGE="${{ env.REGISTRY }}/${{ env.DOCKER_IMAGE_NAME }}:$VERSION"
+          SERVICE_NAME="${{ env.SERVICE_NAME }}"
+          
+          COMPOSE_FILE="swarm-services/$SERVICE_NAME/$ENV_FOLDER/docker-compose.yml"
+          
+          echo "Updating $COMPOSE_FILE with image: $NEW_IMAGE"
+          
+          # Update the image tag (matches any tag after the image name)
+          sed -i "s|image: ${{ env.REGISTRY }}/${{ env.DOCKER_IMAGE_NAME }}:.*|image: $NEW_IMAGE|g" "$COMPOSE_FILE"
+          
+          # Update replicas if specified
+          if [[ -n "$REPLICAS" ]]; then
+            echo "Updating replicas to: $REPLICAS"
+            sed -i "s|replicas: [0-9]\+|replicas: $REPLICAS|g" "$COMPOSE_FILE"
+          fi
+          
+          echo "Updated compose file:"
+          cat "$COMPOSE_FILE"
+          
+          # Commit and push to Swarm-Services repo with retry logic
+          cd swarm-services
+          git config user.name "rosnetdev-deployment-bot[bot]"
+          git config user.email "rosnetdev-deployment-bot[bot]@users.noreply.github.com"
+          
+          git add "$SERVICE_NAME/$ENV_FOLDER/docker-compose.yml"
+          
+          if git diff --staged --quiet; then
+            echo "No changes to commit (version already deployed)"
+            exit 0
+          fi
+          
+          # Commit locally
+          if [[ -n "$REPLICAS" ]]; then
+            git commit -m "deploy($SERVICE_NAME-$ENV_FOLDER): Update to $VERSION with $REPLICAS replicas"
+          else
+            git commit -m "deploy($SERVICE_NAME-$ENV_FOLDER): Update to $VERSION"
+          fi
+          
+          # Try to push with retry logic (handles concurrent deployments)
+          echo "Pushing to Swarm-Services repo..."
+          for i in {1..3}; do
+            if git push origin main; then
+              echo "Successfully pushed to Swarm-Services repo (attempt $i)"
+              exit 0
+            else
+              echo "Push failed, attempt $i/3"
+              if [ $i -lt 3 ]; then
+                echo "Pulling latest changes and retrying..."
+                git pull --rebase origin main
+                sleep 2
+              fi
+            fi
+          done
+          
+          echo "::error::Failed to push to Swarm-Services after 3 attempts"
+          exit 1
+
+      - name: Deployment Summary
+        run: |
+          ENV="${{ matrix.environment }}"
+          VERSION="${{ steps.set_version.outputs.version }}"
+          REPLICAS="${{ github.event.inputs.replicas }}"
+          
+          echo "## $ENV Deployment Complete" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Setting | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|---------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| **Environment** | $ENV |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Version** | \`$VERSION\` |" >> $GITHUB_STEP_SUMMARY
+          
+          if [[ -n "$REPLICAS" ]]; then
+            echo "| **Replicas** | $REPLICAS |" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          echo "| **Image** | \`${{ env.REGISTRY }}/${{ env.DOCKER_IMAGE_NAME }}:$VERSION\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Updated in** | \`${{ env.SWARM_SERVICES_REPO }}\` |" >> $GITHUB_STEP_SUMMARY
+
+  deploy-to-portainer:
+    name: Trigger Portainer (${{ matrix.environment }})
+    runs-on: self-hosted
+    needs: [validate-inputs, deploy-environments]
+    if: |
+      always() && 
+      needs.deploy-environments.result == 'success' &&
+      github.event.inputs.action != 'Build Only'
+    strategy:
+      matrix:
+        environment: ${{ fromJson(needs.validate-inputs.outputs.environments) }}
+      fail-fast: false
+    environment: ${{ matrix.environment }}
+
+    steps:
+      - name: Deploy using Portainer webhook
+        run: |
+          echo "Deploying ${{ env.SERVICE_NAME }} to ${{ matrix.environment }}..."
+          curl.exe -v -X "POST" "${{ vars.PORTAINER_WEBHOOK_API }}" --insecure --fail
+          echo "Portainer webhook triggered successfully"
+
+      - name: Deployment Summary
+        run: |
+          echo "## Portainer Deployment Triggered" >> $env:GITHUB_STEP_SUMMARY
+          echo "" >> $env:GITHUB_STEP_SUMMARY
+          echo "| Setting | Value |" >> $env:GITHUB_STEP_SUMMARY
+          echo "|---------|-------|" >> $env:GITHUB_STEP_SUMMARY
+          echo "| **Service** | ${{ env.SERVICE_NAME }} |" >> $env:GITHUB_STEP_SUMMARY
+          echo "| **Environment** | ${{ matrix.environment }} |" >> $env:GITHUB_STEP_SUMMARY
+          echo "" >> $env:GITHUB_STEP_SUMMARY
+          echo "Portainer webhook triggered to redeploy the stack." >> $env:GITHUB_STEP_SUMMARY

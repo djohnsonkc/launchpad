@@ -1,0 +1,48 @@
+name: Build and Deploy
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and Push Image
+        run: |
+          OWNER="${{ github.repository_owner }}"
+          OWNER_LOWER=$(echo "$OWNER" | tr '[:upper:]' '[:lower:]')
+          NAME="launchpad"
+          TAG="latest"
+          IMAGE="ghcr.io/${OWNER_LOWER}/${NAME}:${TAG}"
+
+          echo "Building and pushing: ${IMAGE}"
+          docker build . --tag ${IMAGE}
+          docker push ${IMAGE}
+
+  deploy:
+    runs-on: [self-hosted, Windows]
+    needs: build
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Deploy Launchpad
+        shell: powershell
+        run: |
+          .\scripts\deploy.ps1 `
+            -WebhookUrl "${{ secrets.PORTAINER_WEBHOOK_URL }}" `
+            -Tag "latest" `
+            -ServiceName "launchpad"

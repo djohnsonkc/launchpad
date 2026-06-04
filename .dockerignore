@@ -1,0 +1,9 @@
+node_modules
+dist
+apps
+data
+.git
+.gitignore
+*.md
+.env
+*.tgz

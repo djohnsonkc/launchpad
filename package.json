@@ -1,0 +1,26 @@
+{
+  "name": "launchpad",
+  "version": "1.0.0",
+  "description": "Lightweight deployment server for net-new React apps built with the rosnet-ui library. Accepts pre-built app bundles and serves them at unique URLs.",
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js"
+  },
+  "dependencies": {
+    "express": "^5.1.0",
+    "multer": "^2.0.0",
+    "adm-zip": "^0.5.16",
+    "cors": "^2.8.5"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.0",
+    "@types/multer": "^2.0.0",
+    "@types/adm-zip": "^0.5.7",
+    "@types/cors": "^2.8.17",
+    "@types/node": "^22.15.0",
+    "tsx": "^4.19.0",
+    "typescript": "~5.9.3"
+  }
+}
