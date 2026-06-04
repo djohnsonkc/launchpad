@@ -72,7 +72,7 @@ export function renderDashboard(apps: AppMeta[]): string {
 
   const emptyState = apps.length === 0
     ? `<div class="rounded-lg border-2 border-dashed py-12 text-center" style="border-color:var(--pc-border-color);background:var(--pc-card-bg);color:var(--pc-text-muted)">
-        <p class="text-sm">No apps deployed yet. Build your React app, zip the <code class="px-1.5 py-0.5 rounded text-sm" style="background:var(--pc-surface-raised)">dist/</code> folder, and POST it to <code class="px-1.5 py-0.5 rounded text-sm" style="background:var(--pc-surface-raised)">/api/deploy</code> &mdash; see the README for details.</p>
+        <p class="text-sm">No apps deployed yet. Build your app, zip the build output folder, and POST it to <code class="px-1.5 py-0.5 rounded text-sm" style="background:var(--pc-surface-raised)">/api/deploy</code> &mdash; see the README for details.</p>
       </div>`
     : '';
 
@@ -135,7 +135,7 @@ export function renderDashboard(apps: AppMeta[]): string {
     <div class="max-w-4xl mx-auto px-6 py-5 flex items-start justify-between gap-8">
       <div class="max-w-2xl">
         <h1 class="text-xl font-semibold text-[var(--pc-font-color)]">Launchpad</h1>
-        <p class="text-sm text-[var(--pc-text-muted)] mt-1">Deploy net-new React apps built with the <a href="https://rosnetui.rosnetdev.com" target="_blank" class="text-[var(--pc-color-primary)] no-underline hover:underline font-medium">rosnet-ui</a> library. Upload a built bundle to <strong>/api/deploy</strong> and get a shareable URL — no pull requests, no deployment pipelines.</p>
+        <p class="text-sm text-[var(--pc-text-muted)] mt-1">Deploy net-new applications as independent, self-contained bundles. Upload a built static bundle to <strong>/api/deploy</strong> and get a shareable URL — framework-agnostic, no SDK, no pull requests, no deployment pipelines.</p>
       </div>
       <button onclick="toggleTheme()" title="Toggle light/dark mode"
         class="bg-transparent border-0 cursor-pointer text-[var(--pc-text-muted)] p-2 rounded-lg hover:bg-[var(--pc-surface-base)] transition-colors shrink-0">

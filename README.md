@@ -1,12 +1,14 @@
 # Launchpad
 
-Lightweight deployment server that hosts net-new React apps at unique URLs. Designed for Rosnet teams building apps with the [rosnet-ui](https://rosnetui.rosnetdev.com) library — ship a working app to stakeholders without standing up infrastructure, CI/CD pipelines, or Kubernetes manifests for every new experiment.
+Lightweight deployment server that hosts net-new applications at unique URLs. Launchpad is intentionally unopinionated — it will host any pre-built static bundle, regardless of framework (React, Vue, Svelte, plain HTML, etc.). Most Rosnet apps are expected to use [rosnet-ui](https://rosnetui.rosnetdev.com) and our Tailwind-based design system for visual consistency, but that's a convention, not a requirement.
 
-Launchpad is intentionally simple: build your React app locally, zip the `dist/` folder, POST it, and Launchpad serves it at a shareable URL.
+Ship a working app to stakeholders without standing up infrastructure, CI/CD pipelines, or Kubernetes manifests for every new experiment: build locally, zip the build output, POST it, and Launchpad serves it at a shareable URL.
+
+> For the why-this-exists pitch, see [docs/pitch-tech-leads.md](docs/pitch-tech-leads.md) (engineering audience) or [docs/pitch-vp.md](docs/pitch-vp.md) (executive audience). Operational concerns live in [docs/scaling.md](docs/scaling.md) and [docs/persistence.md](docs/persistence.md).
 
 ## How it works
 
-1. A developer builds a React app locally (e.g., a Vite app using the rosnet-ui component library)
+1. A developer builds an app locally (typically React + Vite + rosnet-ui, but any framework that produces static files works)
 2. They zip the `dist/` (or equivalent build output) folder
 3. They POST the zip to `/api/deploy` with metadata (team, name, description, creator)
 4. Launchpad extracts the bundle and returns a shareable URL (e.g., `https://launchpad.rosnetdev.com/apps/<team>/<app-name>`)
