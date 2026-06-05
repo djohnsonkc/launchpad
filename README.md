@@ -4,7 +4,7 @@ Lightweight deployment server that hosts net-new applications at unique URLs. La
 
 Ship a working app to stakeholders without standing up infrastructure, CI/CD pipelines, or Kubernetes manifests for every new experiment: build locally, zip the build output, POST it, and Launchpad serves it at a shareable URL.
 
-> For the why-this-exists pitch, see [docs/pitch-tech-leads.md](docs/pitch-tech-leads.md) (engineering audience) or [docs/pitch-vp.md](docs/pitch-vp.md) (executive audience). Operational concerns live in [docs/scaling.md](docs/scaling.md) and [docs/persistence.md](docs/persistence.md).
+> For the why-this-exists pitch, see [docs/pitch-tech-leads.md](docs/pitch-tech-leads.md) (engineering audience) or [docs/pitch-vp.md](docs/pitch-vp.md) (executive audience). Operational concerns live in [docs/scaling.md](docs/scaling.md) and [docs/persistence.md](docs/persistence.md). For the deploy workflow, see [docs/skills.md](docs/skills.md) — Launchpad ships a `/launch` Claude skill that handles build, zip, and upload in one command.
 
 ## How it works
 
