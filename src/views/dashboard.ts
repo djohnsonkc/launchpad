@@ -89,11 +89,43 @@ export function renderDashboard(apps: AppMeta[]): string {
         </p>
       </div>
 
-      <p class="text-sm leading-relaxed text-[var(--pc-text-secondary)]">
-        Launchpad sidesteps those tradeoffs entirely: <strong>no shared runtime, no injection, no iframes.</strong> Each app is deployed as its own self-contained bundle, served from its own route in the same host. Apps share cookies, auth, user context, and platform services, while remaining fully isolated from one another at runtime.
+      <p class="text-sm leading-relaxed text-[var(--pc-text-secondary)] mb-5">
+        Launchpad sidesteps those tradeoffs entirely: <strong>no shared runtime, no injection, no iframes.</strong>
       </p>
 
-      <p class="text-xs text-[var(--pc-text-muted)] mt-4">
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-5">
+        <div class="rounded-lg border p-4" style="border-color:var(--pc-border-color);background:var(--pc-card-bg)">
+          <div class="flex items-center gap-2 mb-2">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--pc-color-primary)">
+              <circle cx="6" cy="6" r="2"/><circle cx="6" cy="18" r="2"/><circle cx="18" cy="12" r="2"/><line x1="8" y1="6" x2="16" y2="11"/><line x1="8" y1="18" x2="16" y2="13"/>
+            </svg>
+            <h3 class="text-sm font-semibold text-[var(--pc-font-color)]">One host, separate routes</h3>
+          </div>
+          <p class="text-xs leading-relaxed text-[var(--pc-text-secondary)]">Each app is a self-contained bundle, served at its own URL under the same host.</p>
+        </div>
+
+        <div class="rounded-lg border p-4" style="border-color:var(--pc-border-color);background:var(--pc-card-bg)">
+          <div class="flex items-center gap-2 mb-2">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--pc-color-primary)">
+              <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
+            </svg>
+            <h3 class="text-sm font-semibold text-[var(--pc-font-color)]">Shared platform services</h3>
+          </div>
+          <p class="text-xs leading-relaxed text-[var(--pc-text-secondary)]">Cookies, auth, user context, and platform services are available across all apps.</p>
+        </div>
+
+        <div class="rounded-lg border p-4" style="border-color:var(--pc-border-color);background:var(--pc-card-bg)">
+          <div class="flex items-center gap-2 mb-2">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--pc-color-primary)">
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+            </svg>
+            <h3 class="text-sm font-semibold text-[var(--pc-font-color)]">Fully isolated at runtime</h3>
+          </div>
+          <p class="text-xs leading-relaxed text-[var(--pc-text-secondary)]">Different React versions, CSS, and dependencies never collide — apps never share a window.</p>
+        </div>
+      </div>
+
+      <p class="text-xs text-[var(--pc-text-muted)]">
         Learn more: <a href="/pitch/tech-leads" class="text-[var(--pc-color-primary)] no-underline hover:underline font-medium">For Tech Leads</a> (deploy mechanics + APIs) · <a href="/pitch/exec" class="text-[var(--pc-color-primary)] no-underline hover:underline font-medium">For Executives</a>
       </p>
     </section>
