@@ -1,4 +1,5 @@
 import type { AppMeta } from '../lib/store.js';
+import { layout } from './layout.js';
 
 export function renderDashboard(apps: AppMeta[]): string {
   const sorted = apps
@@ -71,83 +72,22 @@ export function renderDashboard(apps: AppMeta[]): string {
     .join('');
 
   const emptyState = apps.length === 0
-    ? `<div class="rounded-lg border-2 border-dashed py-12 text-center" style="border-color:var(--pc-border-color);background:var(--pc-card-bg);color:var(--pc-text-muted)">
-        <p class="text-sm">No apps deployed yet. Build your app, zip the build output folder, and POST it to <code class="px-1.5 py-0.5 rounded text-sm" style="background:var(--pc-surface-raised)">/api/deploy</code> &mdash; see the README for details.</p>
+    ? `<div class="rounded-lg border-2 border-dashed px-6 py-12 text-center" style="border-color:var(--pc-border-color);background:var(--pc-card-bg);color:var(--pc-text-muted)">
+        <p class="text-sm max-w-prose mx-auto leading-relaxed">No apps deployed yet. Build your app, zip the build output folder, and POST it to <code class="px-1.5 py-0.5 rounded text-sm" style="background:var(--pc-surface-raised)">/api/deploy</code> &mdash; see the <a href="/pitch/tech-leads" class="text-[var(--pc-color-primary)] no-underline hover:underline font-medium">For Tech Leads</a> page for deploy mechanics and APIs.</p>
       </div>`
     : '';
 
-  return `<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Launchpad — Rosnet</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="https://rosnetui.rosnetdev.com/css/rosnet-design-tokens.css" />
-  <style>
-    :root {
-      --pc-border-color: #e5e7eb;
-      --pc-text-muted: #9ca3af;
-      --pc-text-secondary: #6b7280;
-      --pc-card-bg: var(--pc-surface-base);
-      --pc-card-hover: #f9fafb;
-    }
-    html.dark {
-      --pc-color-primary: #5ba3d9;
-      --pc-surface-base: #2a2d31;
-      --pc-surface-raised: #36393f;
-      --pc-font-color: #D1D5DB;
-      --pc-font-color-on-surface: #333;
-      --pc-border-color: #374151;
-      --pc-text-muted: #6b7280;
-      --pc-text-secondary: #9ca3af;
-      --pc-card-bg: var(--pc-surface-raised);
-      --pc-card-hover: rgba(55, 65, 81, 0.5);
-    }
-  </style>
-  <script>
-    // Apply theme early to prevent flash
-    (function() {
-      var saved = localStorage.getItem('theme');
-      if (saved === 'dark' || (!saved && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
-        document.documentElement.classList.add('dark');
-      }
-    })();
-  </script>
-  <script src="https://unpkg.com/@tailwindcss/browser@4"></script>
-  <style type="text/tailwindcss">
-    @theme {
-      --font-sans: "Open Sans", ui-sans-serif, system-ui, sans-serif;
-      --color-brand-primary: var(--pc-color-primary);
-      --color-brand-success: var(--pc-color-success);
-      --color-brand-warning: var(--pc-color-warning);
-      --color-brand-danger: var(--pc-color-danger);
-      --color-brand-accent: var(--pc-color-accent);
-      --color-surface-base: var(--pc-surface-base);
-      --color-surface-raised: var(--pc-surface-raised);
-    }
-  </style>
-</head>
-<body class="bg-surface-base text-[var(--pc-font-color)] font-sans m-0">
-  <header class="bg-surface-base border-b border-[var(--pc-border-color)]">
-    <div class="max-w-4xl mx-auto px-6 py-5 flex items-start justify-between gap-8">
-      <div class="max-w-2xl">
-        <h1 class="text-xl font-semibold text-[var(--pc-font-color)]">Launchpad</h1>
-        <p class="text-sm text-[var(--pc-text-muted)] mt-1">Deploy net-new applications as independent, self-contained bundles. Upload a built static bundle to <strong>/api/deploy</strong> and get a shareable URL — framework-agnostic, no SDK, no pull requests, no deployment pipelines.</p>
-      </div>
-      <button onclick="toggleTheme()" title="Toggle light/dark mode"
-        class="bg-transparent border-0 cursor-pointer text-[var(--pc-text-muted)] p-2 rounded-lg hover:bg-[var(--pc-surface-base)] transition-colors shrink-0">
-        <svg id="icon-sun" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="hidden"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
-        <svg id="icon-moon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
-      </button>
-    </div>
-  </header>
-
+  const content = `
   <main class="max-w-4xl mx-auto px-6 py-8">
+    <section class="mb-8">
+      <h1 class="text-2xl font-semibold text-[var(--pc-font-color)] mb-2">Deployed Apps</h1>
+      <p class="text-sm text-[var(--pc-text-secondary)] leading-relaxed max-w-3xl">
+        A shell-architecture alternative for hosting independent apps under one host — no <strong><em>shared runtime</em></strong>, no <strong><em>injection</em></strong>, no <strong><em>iframes</em></strong>. Each app below is a self-contained bundle served at its own URL under <code class="px-1 py-0.5 rounded text-sm" style="background:var(--pc-surface-raised);border:1px solid var(--pc-border-color);font-size:0.85em">/apps/&lt;team&gt;/&lt;slug&gt;/</code>, grouped here by owning team. See the pitch pages for <a href="/pitch/tech-leads" class="text-[var(--pc-color-primary)] no-underline hover:underline font-medium">tech leads</a> (which also covers deploy mechanics and APIs) and <a href="/pitch/exec" class="text-[var(--pc-color-primary)] no-underline hover:underline font-medium">executives</a>.
+      </p>
+    </section>
+
     <div class="flex items-center justify-between mb-6">
-      <h2 class="text-base font-semibold text-[var(--pc-font-color)]">Deployed Apps</h2>
+      <h2 class="text-base font-semibold text-[var(--pc-text-secondary)] uppercase tracking-wider">${apps.length} app${apps.length === 1 ? '' : 's'}</h2>
       <div class="flex items-center gap-1">
         <button onclick="setView('grid')" id="btn-grid" title="Grid view"
           class="bg-transparent border-0 cursor-pointer p-2 rounded-lg transition-colors text-[var(--pc-text-muted)]">
@@ -162,8 +102,9 @@ export function renderDashboard(apps: AppMeta[]): string {
 
     ${teamSections}
     ${emptyState}
-  </main>
+  </main>`;
 
+  const bodyExtras = `
   <dialog id="delete-dialog" style="position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);margin:0;" class="rounded-lg border border-[var(--pc-border-color)] shadow-xl p-0 bg-[var(--pc-surface-raised)] text-[var(--pc-font-color)] max-w-sm w-full backdrop:bg-black/40">
     <form method="dialog">
       <div class="p-6">
@@ -178,25 +119,6 @@ export function renderDashboard(apps: AppMeta[]): string {
   </dialog>
 
   <script>
-    function applyTheme(dark) {
-      document.documentElement.classList.toggle('dark', dark);
-      document.getElementById('icon-sun').classList.toggle('hidden', !dark);
-      document.getElementById('icon-moon').classList.toggle('hidden', dark);
-    }
-
-    function toggleTheme() {
-      const dark = !document.documentElement.classList.contains('dark');
-      localStorage.setItem('theme', dark ? 'dark' : 'light');
-      applyTheme(dark);
-    }
-
-    // Init theme from localStorage or system preference
-    (function() {
-      const saved = localStorage.getItem('theme');
-      const prefersDark = saved === 'dark' || (!saved && window.matchMedia('(prefers-color-scheme: dark)').matches);
-      applyTheme(prefersDark);
-    })();
-
     function setView(mode) {
       const isGrid = mode === 'grid';
       document.querySelectorAll('.view-grid').forEach(el => el.classList.toggle('hidden', !isGrid));
@@ -206,7 +128,6 @@ export function renderDashboard(apps: AppMeta[]): string {
       localStorage.setItem('viewMode', mode);
     }
 
-    // Init view mode from localStorage
     (function() {
       const saved = localStorage.getItem('viewMode');
       if (saved === 'grid') setView('grid');
@@ -229,14 +150,13 @@ export function renderDashboard(apps: AppMeta[]): string {
       else alert('Failed to delete: ' + (await res.json()).error);
     });
 
-    // Close on backdrop click
     document.getElementById('delete-dialog').addEventListener('click', (e) => {
       if (e.target === e.currentTarget) {
         e.target.close();
         pendingDeleteFolder = null;
       }
     });
-  </script>
-</body>
-</html>`;
+  </script>`;
+
+  return layout({ title: 'Launchpad', content, active: 'home', bodyExtras });
 }

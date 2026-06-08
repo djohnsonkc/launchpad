@@ -1,17 +1,21 @@
 # Launchpad
 
-Lightweight deployment server that hosts net-new applications at unique URLs. Launchpad is intentionally unopinionated — it will host any pre-built static bundle, regardless of framework (React, Vue, Svelte, plain HTML, etc.). Most Rosnet apps are expected to use [rosnet-ui](https://rosnetui.rosnetdev.com) and our Tailwind-based design system for visual consistency, but that's a convention, not a requirement.
+**A shell-architecture alternative for hosting independent apps under one host.**
 
-Ship a working app to stakeholders without standing up infrastructure, CI/CD pipelines, or Kubernetes manifests for every new experiment: build locally, zip the build output, POST it, and Launchpad serves it at a shareable URL.
+Unifying a frontend across teams typically means ***shell applications***, ***runtime injection***, or ***iframes***. None of these are ideal: they create coordination overhead between teams and introduce cross-app coupling — where a change in one application can break another.
 
-> For the why-this-exists pitch, see [docs/pitch-tech-leads.md](docs/pitch-tech-leads.md) (engineering audience) or [docs/pitch-vp.md](docs/pitch-vp.md) (executive audience). Operational concerns live in [docs/scaling.md](docs/scaling.md) and [docs/persistence.md](docs/persistence.md). For the deploy workflow, see [docs/skills.md](docs/skills.md) — Launchpad ships a `/launch` Claude skill that handles build, zip, and upload in one command.
+Launchpad takes a different approach. Each app is deployed as its own self-contained bundle, served at its own URL under the same host. Apps share authentication, cookies, and platform services, but stay isolated from one another at runtime — different React versions, CSS resets, and state libraries never collide because they never share a window.
+
+Launchpad is intentionally unopinionated: it will host any pre-built static bundle (React, Vue, Svelte, plain HTML, etc.). Pair it with your team's preferred component library and design system for visual consistency across deployed apps. Build locally, zip the output, POST it, and Launchpad serves at a shareable URL.
+
+> For the why-this-exists pitch, see [docs/pitch-tech-leads.md](docs/pitch-tech-leads.md) (engineering audience) or [docs/pitch-exec.md](docs/pitch-exec.md) (executive audience). Operational concerns live in [docs/scaling.md](docs/scaling.md) and [docs/persistence.md](docs/persistence.md). For the deploy workflow, see [docs/skills.md](docs/skills.md) — Launchpad ships a `/launch` Claude skill that handles build, zip, and upload in one command.
 
 ## How it works
 
-1. A developer builds an app locally (typically React + Vite + rosnet-ui, but any framework that produces static files works)
+1. A developer builds an app locally (typically React + Vite, but any framework that produces static files works)
 2. They zip the `dist/` (or equivalent build output) folder
 3. They POST the zip to `/api/deploy` with metadata (team, name, description, creator)
-4. Launchpad extracts the bundle and returns a shareable URL (e.g., `https://launchpad.rosnetdev.com/apps/<team>/<app-name>`)
+4. Launchpad extracts the bundle and returns a shareable URL (e.g., `https://launchpad.example.com/apps/<team>/<app-name>`)
 5. Stakeholders open the URL and interact with the live app
 
 ### Server APIs
@@ -28,23 +32,31 @@ Ship a working app to stakeholders without standing up infrastructure, CI/CD pip
 
 Launchpad uses a file-based storage approach — no database required. This keeps the system simple, portable, and easy to back up.
 
-**Metadata store** — `data/apps.json` maintains a registry of all deployed apps. Each entry tracks the app's display name, owning team, creator, description, deploy timestamps, and the URL path used to serve it. When an app is deployed via `POST /api/deploy`, the server performs an upsert — inserting a new record or updating the existing one if the same folder slug already exists. This ensures redeployments cleanly overwrite previous versions without leaving orphaned entries.
+**Metadata store** — `data/apps-meta/<team>/<slug>.json`, one file per deployed app. Each file tracks the app's display name, owning team, creator, description, deploy timestamps, and the URL path used to serve it. Writes are atomic (write to `.tmp.<random>`, then `rename`), which means concurrent deploys of different apps never contend on the same file and dashboard reads never see a partially-written record. See [docs/persistence.md](docs/persistence.md) for the design rationale.
 
-```json
-[
-  {
-    "folder": "ux/scheduling",
-    "name": "Scheduling Workflow v2",
-    "team": "UX",
-    "creator": "Dywayne Johnson",
-    "description": "Progressive scheduling flow for managers",
-    "createdAt": "2026-06-04T14:13:07.319Z",
-    "updatedAt": "2026-06-04T14:13:07.319Z",
-    "url": "/apps/ux/scheduling/"
-  }
-]
+```
+data/apps-meta/
+  marketing/
+    landing-page.json
+  growth/
+    onboarding.json
 ```
 
-**Static file store** — `apps/` contains the actual app builds, organized by team and app name (e.g., `apps/ux/scheduling/`). When a zip is uploaded, the server extracts it into the appropriate directory, automatically flattening single-folder archives (e.g., if the zip contains a `dist/` wrapper, the contents are promoted to the top level). Express serves these as static files with SPA fallback routing, so client-side navigation works out of the box.
+Each file:
+
+```json
+{
+  "folder": "marketing/landing-page",
+  "name": "Q3 Launch Landing",
+  "team": "marketing",
+  "creator": "Jane Doe",
+  "description": "Promotional landing page for the Q3 product launch",
+  "createdAt": "2026-06-04T14:13:07.319Z",
+  "updatedAt": "2026-06-04T14:13:07.319Z",
+  "url": "/apps/marketing/landing-page/"
+}
+```
+
+**Static file store** — `apps/` contains the actual app builds, organized by team and app name (e.g., `apps/marketing/landing-page/`). When a zip is uploaded, the server extracts it into the appropriate directory, automatically flattening single-folder archives (e.g., if the zip contains a `dist/` wrapper, the contents are promoted to the top level). Express serves these as static files with SPA fallback routing, so client-side navigation works out of the box.
 
 Both directories are mounted as Docker volumes in production, ensuring app data persists across container restarts and redeployments.

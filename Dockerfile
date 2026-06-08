@@ -12,6 +12,9 @@ ENV PORT=4000
 COPY --from=build /app/dist ./dist
 COPY --from=build /app/node_modules ./node_modules
 COPY --from=build /app/package.json ./
+COPY --from=build /app/README.md ./
+COPY --from=build /app/docs ./docs
+COPY --from=build /app/public ./public
 RUN mkdir -p apps data
 EXPOSE 4000
 CMD ["node", "dist/index.js"]

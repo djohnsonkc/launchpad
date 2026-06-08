@@ -27,7 +27,7 @@ Running the framework's normal build (which writes to `dist/`, `build/`, etc.) i
 
 ## Configuration
 
-- **Launchpad server URL** — default `https://launchpad.rosnetdev.com`, overridden by the `LAUNCHPAD_SERVER_URL` environment variable if set. Resolve this once at the start and reuse it.
+- **Launchpad server URL** — default `https://launchpad.example.com`, overridden by the `LAUNCHPAD_SERVER_URL` environment variable if set. Resolve this once at the start and reuse it.
 - **Cache file location** — `~/.launchpad/apps.json`. Single JSON object keyed by absolute app path. Create the `~/.launchpad/` directory if it doesn't exist.
 
 ## Workflow
@@ -49,10 +49,10 @@ Cache entry shape:
 ```json
 {
   "/absolute/path/to/app": {
-    "team": "ux",
-    "name": "Scheduling Workflow",
-    "folder": "ux/scheduling",
-    "description": "Progressive scheduling flow for managers",
+    "team": "marketing",
+    "name": "Q3 Launch Landing",
+    "folder": "marketing/landing-page",
+    "description": "Promotional landing page for the Q3 product launch",
     "framework": "vite",
     "buildCommand": "npm run build",
     "buildDir": "dist",
@@ -99,9 +99,9 @@ Parse the response:
 
 Prompt the user for the following. Pre-populate defaults where you can.
 
-- **Team** — short kebab-case slug (e.g., `ux`, `food`, `labor`, `pc`, `platform`). No default.
-- **Folder slug** — the URL slug under the team (e.g., `scheduling`). Default: kebab-cased name of the app directory.
-- **Display name** — human-readable (e.g., "Scheduling Workflow v2"). Default: from `package.json`'s `name` field (title-cased) if present, else the directory name.
+- **Team** — short kebab-case slug (e.g., `marketing`, `growth`, `platform`, `engineering`). No default.
+- **Folder slug** — the URL slug under the team (e.g., `landing-page`). Default: kebab-cased name of the app directory.
+- **Display name** — human-readable (e.g., "Q3 Launch Landing"). Default: from `package.json`'s `name` field (title-cased) if present, else the directory name.
 - **Description** — one-line description. Default: from `package.json`'s `description` field if present.
 
 The full **folder** sent to the API will be `<team>/<folder-slug>`.
@@ -115,15 +115,15 @@ Show a summary and let the user adjust before proceeding:
 ```
 Ready to deploy to Launchpad:
 
-  Path:         /home/dj/projects/scheduling
+  Path:         /home/jane/projects/landing-page
   Framework:    vite
   Build:        npm run build  →  dist/
-  Team:         ux
-  Folder:       ux/scheduling
-  Name:         Scheduling Workflow
-  Description:  Progressive scheduling flow for managers
-  Creator:      Dywayne Johnson
-  Deploy URL:   https://launchpad.rosnetdev.com/apps/ux/scheduling/
+  Team:         marketing
+  Folder:       marketing/landing-page
+  Name:         Q3 Launch Landing
+  Description:  Promotional landing page for the Q3 product launch
+  Creator:      Jane Doe
+  Deploy URL:   https://launchpad.example.com/apps/marketing/landing-page/
 
 Say "yes" to build and deploy, or tell me what you'd like to change.
 ```
@@ -298,31 +298,31 @@ rm -f "$TMP_ZIP"
 ## Example usage
 
 ```
-User: /launch ~/projects/scheduling
+User: /launch ~/projects/landing-page
 
 Claude: Detected framework: vite (vite.config.ts found, vite in deps)
 
-        What team owns this app? (e.g., ux, food, labor, pc)
+        What team owns this app? (e.g., marketing, growth, platform)
 
-User: ux
+User: marketing
 
 Claude: Defaults to use:
-          Folder slug: scheduling
-          Display name: Scheduling Workflow
-          Description: Progressive scheduling flow for managers
-          Creator: Dywayne Johnson  (from git config)
+          Folder slug: landing-page
+          Display name: Q3 Launch Landing
+          Description: Promotional landing page for the Q3 product launch
+          Creator: Jane Doe  (from git config)
 
         Ready to deploy to Launchpad:
 
-          Path:         /home/dj/projects/scheduling
+          Path:         /home/jane/projects/landing-page
           Framework:    vite
-          Build:        npx vite build --base=/apps/ux/scheduling/  →  dist/
-          Team:         ux
-          Folder:       ux/scheduling
-          Name:         Scheduling Workflow
-          Description:  Progressive scheduling flow for managers
-          Creator:      Dywayne Johnson
-          Deploy URL:   https://launchpad.rosnetdev.com/apps/ux/scheduling/
+          Build:        npx vite build --base=/apps/marketing/landing-page/  →  dist/
+          Team:         marketing
+          Folder:       marketing/landing-page
+          Name:         Q3 Launch Landing
+          Description:  Promotional landing page for the Q3 product launch
+          Creator:      Jane Doe
+          Deploy URL:   https://launchpad.example.com/apps/marketing/landing-page/
 
         Note: --base flag overrides vite.config.ts at build time; your config file is not modified.
 
@@ -336,5 +336,5 @@ Claude: Building... ✓ (8.2s)
         Cached config to ~/.launchpad/apps.json.
 
         Your app is live!
-        Open: https://launchpad.rosnetdev.com/apps/ux/scheduling/
+        Open: https://launchpad.example.com/apps/marketing/landing-page/
 ```

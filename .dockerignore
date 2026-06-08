@@ -4,6 +4,5 @@ apps
 data
 .git
 .gitignore
-*.md
 .env
 *.tgz

@@ -1,6 +1,6 @@
 # Claude Skills
 
-Launchpad ships Claude Code skills so teams can deploy apps with a single command instead of memorizing the `curl` form for `/api/deploy`. Same idea as the [proto-share](https://github.com/RosnetDev/rosnet-product-prototypes) skill, but generalized — operates on any team's app build, not a specific repo's layout.
+Launchpad ships Claude Code skills so teams can deploy apps with a single command instead of memorizing the `curl` form for `/api/deploy`. The skills are generalized — they operate on any team's app build, not a specific repo's layout.
 
 ## /launch
 
@@ -29,7 +29,7 @@ Skills live in `.claude/skills/` inside this repo. Engineers clone Launchpad, `c
 /launch ~/projects/my-app
 ```
 
-The skill resolves the path, reads `package.json` (if present), and proceeds. Default Launchpad server URL: `https://launchpad.rosnetdev.com`, override via `LAUNCHPAD_SERVER_URL`.
+The skill resolves the path, reads `package.json` (if present), and proceeds. Default Launchpad server URL: `https://launchpad.example.com`, override via `LAUNCHPAD_SERVER_URL`.
 
 ## Framework detection
 
@@ -63,21 +63,21 @@ A single JSON file in the user's home directory caches deploy metadata, keyed by
 
 ```json
 {
-  "/c/Users/dj/projects/scheduling": {
-    "team": "ux",
-    "name": "Scheduling Workflow",
-    "folder": "ux/scheduling",
-    "description": "Progressive scheduling flow for managers",
+  "/home/jane/projects/landing-page": {
+    "team": "marketing",
+    "name": "Q3 Launch Landing",
+    "folder": "marketing/landing-page",
+    "description": "Promotional landing page for the Q3 product launch",
     "framework": "vite",
     "buildCommand": "npm run build",
     "buildDir": "dist",
     "includePatterns": null
   },
-  "/c/Users/dj/projects/beholdtheword.com": {
-    "team": "dywayne",
-    "name": "Behold the Word",
-    "folder": "dywayne/beholdtheword",
-    "description": "A more reverent way to encounter God's Word.",
+  "/home/jane/projects/docs-site": {
+    "team": "docs",
+    "name": "Documentation Site",
+    "folder": "docs/site",
+    "description": "Hand-written HTML documentation",
     "framework": "manual",
     "buildCommand": null,
     "buildDir": null,

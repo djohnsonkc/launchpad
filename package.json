@@ -1,7 +1,7 @@
 {
   "name": "launchpad",
   "version": "1.0.0",
-  "description": "Lightweight deployment server for net-new applications. Hosts any pre-built static bundle at a unique URL — framework-agnostic, no SDK required.",
+  "description": "Lightweight deployment server for applications. Hosts any pre-built static bundle at a unique URL — framework-agnostic, no SDK required.",
   "type": "module",
   "scripts": {
     "dev": "tsx watch src/index.ts",
@@ -12,6 +12,7 @@
     "@types/unzipper": "^0.10.11",
     "cors": "^2.8.5",
     "express": "^5.1.0",
+    "marked": "^18.0.5",
     "multer": "^2.0.0",
     "unzipper": "^0.12.3"
   },

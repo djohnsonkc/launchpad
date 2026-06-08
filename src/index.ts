@@ -5,6 +5,7 @@ import { fileURLToPath } from 'url';
 import { deployRouter } from './routes/deploy.js';
 import { appsRouter } from './routes/apps.js';
 import { renderDashboard } from './views/dashboard.js';
+import { renderMarkdownPage } from './views/page.js';
 import { getAppList } from './lib/store.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -15,6 +16,9 @@ const PORT = parseInt(process.env.PORT || '4000', 10);
 
 app.use(cors());
 app.use(express.json());
+
+// ─── Public static assets (logo, favicon, etc.) ──────────────
+app.use(express.static(path.join(ROOT, 'public')));
 
 // ─── API Routes ──────────────────────────────────────────────
 app.use('/api', deployRouter);
@@ -46,6 +50,33 @@ app.use('/apps/:name', (req, res, next) => {
 app.get('/', async (_req, res) => {
   const apps = await getAppList();
   res.type('html').send(renderDashboard(apps));
+});
+
+// ─── Content pages (rendered from markdown) ──────────────────
+app.get('/pitch/tech-leads', async (_req, res, next) => {
+  try {
+    const html = await renderMarkdownPage({
+      filePath: path.join(ROOT, 'docs', 'pitch-tech-leads.md'),
+      title: 'For Tech Leads — Launchpad',
+      active: 'tech-leads',
+    });
+    res.type('html').send(html);
+  } catch (err) {
+    next(err);
+  }
+});
+
+app.get('/pitch/exec', async (_req, res, next) => {
+  try {
+    const html = await renderMarkdownPage({
+      filePath: path.join(ROOT, 'docs', 'pitch-exec.md'),
+      title: 'For Executives — Launchpad',
+      active: 'exec',
+    });
+    res.type('html').send(html);
+  } catch (err) {
+    next(err);
+  }
 });
 
 // ─── Start ───────────────────────────────────────────────────

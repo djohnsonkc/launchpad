@@ -9,7 +9,7 @@ Two artifacts, shared fate:
 | Artifact | Location | What's in it | Approx size |
 |---|---|---|---|
 | Bundle files | `apps/<folder>/` | Extracted static assets for each deployed app | Hundreds of MB to GBs total |
-| Metadata index | `data/apps.json` | Display name, team, creator, description, timestamps, URL | Few KB |
+| Metadata store | `data/apps-meta/<team>/<slug>.json` (one file per app) | Display name, team, creator, description, timestamps, URL | Few KB per file |
 
 If metadata survives but bundles don't, the dashboard lists apps that 404 when clicked. If bundles survive but metadata doesn't, the dashboard goes empty but stale URLs still resolve. Both must share a lifecycle — one volume covering both, or two volumes provisioned together.
 
@@ -19,7 +19,7 @@ If metadata survives but bundles don't, the dashboard lists apps that 404 when c
 - Both directories are gitignored ([.gitignore](../.gitignore)) — they're runtime state, not source.
 - **Volumes are not yet declared in the production compose file.** Today, a container redeploy with a new image tag would lose all deployed apps because the runtime directories are part of the container's writable layer, not a persistent volume.
 
-> **Action required:** declare named volumes for `/app/apps` and `/app/data` in the Swarm-Services compose for Launchpad. See the decision below.
+> **Action required:** declare named volumes for `/app/apps` and `/app/data` in your production compose file (Docker Compose, Swarm, Kubernetes, etc.). See the decision below.
 
 ## Failure modes
 
@@ -38,16 +38,16 @@ The image-redeploy row is the main one. That's the routine "Launchpad ships a ne
 ### Decision: Persist via named Docker volumes
 
 - **Date:** 2026-06-04
-- **Status:** Accepted, implementation pending (compose change lives in Swarm-Services repo)
+- **Status:** Accepted, implementation pending (compose change lives in the operator's deployment config)
 
 **Context.** The Dockerfile already separates runtime data into `apps/` and `data/`, but the production compose does not yet mount volumes onto those paths. An image redeploy currently destroys all deployed apps.
 
-**Decision.** Declare two named Docker volumes in the Swarm-Services compose for Launchpad and mount them onto `/app/apps` and `/app/data` respectively. Sketch:
+**Decision.** Declare two named Docker volumes in the production compose and mount them onto `/app/apps` and `/app/data` respectively. Sketch:
 
 ```yaml
 services:
   launchpad:
-    image: ghcr.io/rosnetdev/launchpad:${SERVICE_TAG}
+    image: launchpad:${SERVICE_TAG}
     volumes:
       - launchpad_apps:/app/apps
       - launchpad_data:/app/data
@@ -57,7 +57,7 @@ volumes:
   launchpad_data:
 ```
 
-(Exact form depends on Swarm-Services repo conventions — driver, naming scheme, NFS/host-bind options. Update this snippet once those are confirmed.)
+(Exact form depends on your deployment conventions — driver, naming scheme, NFS/host-bind options.)
 
 **Why named, not anonymous, volumes?** Anonymous volumes get a new identity per container and can be orphaned on redeploy. Named volumes have stable identity across container/image lifecycles — that's the whole point.
 
@@ -87,11 +87,11 @@ Triggers worth watching:
 
 ### Graduation: database for metadata
 
-`data/apps.json` is good enough for a single-writer, small-dataset, simple-schema world. A database becomes the right call when any of these happen:
+The per-file metadata store (one JSON file per app, atomic rename on write) is good enough for a single-instance, small-dataset, simple-schema world. A database becomes the right call when any of these happen:
 
-- **Multi-instance Launchpad.** Concurrent writers to a JSON file race; needs a real transaction layer. Postgres or SQLite would do.
-- **Audit / history.** Tracking deploy events over time (who, when, what changed) is naturally a row-per-event model, ugly as JSON overwrites.
-- **Search / query.** Filtering apps by team, age, creator, etc. against a flat JSON file gets slow and clumsy past a few hundred entries.
+- **Multi-instance Launchpad.** The per-file store survives concurrent deploys of *different* apps on a single instance, but not concurrent deploys across multiple Launchpad processes writing to the same shared filesystem. Postgres or SQLite gives real transactions.
+- **Audit / history.** Tracking deploy events over time (who, when, what changed) is naturally a row-per-event model, ugly as repeated JSON file rewrites.
+- **Search / query.** Filtering apps by team, age, creator, etc. against a directory of JSON files gets slow and clumsy past a few hundred entries (each list call walks the tree).
 
 If a DB is introduced, bundles still belong on filesystem or object storage — big binary blobs do not belong in databases.
 
@@ -99,7 +99,7 @@ If a DB is introduced, bundles still belong on filesystem or object storage — 
 
 If we ever scale to >1 Launchpad replica behind a load balancer, the current architecture has two issues:
 
-1. **Concurrent writers** to `data/apps.json` race. Needs DB (see above) or a file-locking layer.
+1. **Concurrent writers across processes.** The per-file store eliminates the read-modify-write race within a single process (different files = different writes), but two processes deploying the same app at once still race on the same file. A real DB with transactions is the proper fix.
 2. **Per-host bundle storage** means a request hitting replica B might not find an app that replica A served. Needs shared bundle storage — clustered volume (NFS/GlusterFS) or object storage.
 
 Both are tractable but represent a meaningful re-architecture. Not justified at single-instance scale.

@@ -30,7 +30,7 @@ Operational limits and the reasoning behind them. Add a new dated entry under **
 4. Added explicit `MulterError` handling so oversized uploads return `413 Payload Too Large` with a clear message instead of the previous generic 500.
 5. Wrap the whole handler in `try/finally` and `fs.unlink` the temp file in `finally` so failed deploys don't leak disk.
 6. Added zip-slip protection — entries whose resolved target path escapes the destination directory are rejected before any bytes are written. AdmZip had this built in; we now do it ourselves.
-7. **Normalize backslashes to forward slashes** when reading zip entry paths. PowerShell's `Compress-Archive` (used by the proto-share skill among others) writes entry paths with `\` separators, violating the zip spec's MUST-use-forward-slash requirement. Without this normalization, wrapper-folder detection fails on Windows-built zips and on Linux servers the files would extract with literal backslashes in their names. Discovered via smoke test against a `Compress-Archive`-built fixture.
+7. **Normalize backslashes to forward slashes** when reading zip entry paths. PowerShell's `Compress-Archive` writes entry paths with `\` separators, violating the zip spec's MUST-use-forward-slash requirement. Without this normalization, wrapper-folder detection fails on Windows-built zips and on Linux servers the files would extract with literal backslashes in their names. Discovered via smoke test against a `Compress-Archive`-built fixture.
 
 **Why not chunked / resumable uploads?** Implementation complexity (state, retries, partial-cleanup) isn't justified at this scale. A single-shot HTTP POST works fine up to ~1 GB on reasonable links. Revisit if bundles routinely exceed 1 GB or upload reliability becomes an issue.
 
