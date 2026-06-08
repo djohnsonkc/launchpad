@@ -79,15 +79,27 @@ export function renderDashboard(apps: AppMeta[]): string {
 
   const content = `
   <main class="max-w-4xl mx-auto px-6 py-8">
-    <section class="mb-8">
-      <h1 class="text-2xl font-semibold text-[var(--pc-font-color)] mb-2">Deployed Apps</h1>
-      <p class="text-sm text-[var(--pc-text-secondary)] leading-relaxed max-w-3xl">
-        A shell-architecture alternative for hosting independent apps under one host — no <strong><em>shared runtime</em></strong>, no <strong><em>injection</em></strong>, no <strong><em>iframes</em></strong>. Each app below is a self-contained bundle served at its own URL under <code class="px-1 py-0.5 rounded text-sm" style="background:var(--pc-surface-raised);border:1px solid var(--pc-border-color);font-size:0.85em">/apps/&lt;team&gt;/&lt;slug&gt;/</code>, grouped here by owning team. See the pitch pages for <a href="/pitch/tech-leads" class="text-[var(--pc-color-primary)] no-underline hover:underline font-medium">tech leads</a> (which also covers deploy mechanics and APIs) and <a href="/pitch/exec" class="text-[var(--pc-color-primary)] no-underline hover:underline font-medium">executives</a>.
+    <section class="mb-10 max-w-3xl">
+      <div class="border-l-4 pl-4 mb-5" style="border-color:var(--pc-color-primary)">
+        <p class="text-sm leading-relaxed text-[var(--pc-text-secondary)] mb-2">
+          <strong><em>Shell applications</em></strong>, <strong><em>runtime injection</em></strong>, and <strong><em>iframes</em></strong> all deliver a unified UX, but they pay for it the same way:
+        </p>
+        <p class="text-base font-semibold italic text-[var(--pc-font-color)]">
+          Cross-app coupling masquerading as cohesion.
+        </p>
+      </div>
+
+      <p class="text-sm leading-relaxed text-[var(--pc-text-secondary)]">
+        Launchpad sidesteps those tradeoffs entirely: <strong>no shared runtime, no injection, no iframes.</strong> Each app is deployed as its own self-contained bundle, served from its own route in the same host. Apps share cookies, auth, user context, and platform services, while remaining fully isolated from one another at runtime.
+      </p>
+
+      <p class="text-xs text-[var(--pc-text-muted)] mt-4">
+        Learn more: <a href="/pitch/tech-leads" class="text-[var(--pc-color-primary)] no-underline hover:underline font-medium">For Tech Leads</a> (deploy mechanics + APIs) · <a href="/pitch/exec" class="text-[var(--pc-color-primary)] no-underline hover:underline font-medium">For Executives</a>
       </p>
     </section>
 
     <div class="flex items-center justify-between mb-6">
-      <h2 class="text-base font-semibold text-[var(--pc-text-secondary)] uppercase tracking-wider">${apps.length} app${apps.length === 1 ? '' : 's'}</h2>
+      <h2 class="text-base font-semibold text-[var(--pc-text-secondary)] uppercase tracking-wider">Deployed Apps (${apps.length})</h2>
       <div class="flex items-center gap-1">
         <button onclick="setView('grid')" id="btn-grid" title="Grid view"
           class="bg-transparent border-0 cursor-pointer p-2 rounded-lg transition-colors text-[var(--pc-text-muted)]">
