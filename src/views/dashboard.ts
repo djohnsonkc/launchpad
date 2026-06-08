@@ -79,7 +79,7 @@ export function renderDashboard(apps: AppMeta[]): string {
 
   const content = `
   <main class="max-w-4xl mx-auto px-6 py-8">
-    <section class="mb-10 max-w-3xl">
+    <section class="mb-10">
       <div class="border-l-4 pl-4 mb-5" style="border-color:var(--pc-color-primary)">
         <p class="text-sm leading-relaxed text-[var(--pc-text-secondary)] mb-2">
           <strong><em>Shell applications</em></strong>, <strong><em>runtime injection</em></strong>, and <strong><em>iframes</em></strong> all deliver a unified UX, but they pay for it the same way:

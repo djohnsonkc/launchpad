@@ -18,12 +18,20 @@ const NAV_ITEMS: { slug: NavSlug; label: string; href: string }[] = [
 ];
 
 export function layout({ title, content, active, bodyExtras = '' }: LayoutOptions): string {
-  const navLinks = NAV_ITEMS.map(item => {
+  const desktopNavLinks = NAV_ITEMS.map(item => {
     const isActive = active === item.slug;
     const activeClasses = isActive
       ? 'text-[var(--pc-color-primary)] font-medium'
       : 'text-[var(--pc-text-secondary)] hover:text-[var(--pc-font-color)]';
-    return `<a href="${item.href}" class="px-3 py-2 text-sm no-underline transition-colors ${activeClasses}">${item.label}</a>`;
+    return `<a href="${item.href}" class="px-3 py-2 text-sm no-underline whitespace-nowrap transition-colors ${activeClasses}">${item.label}</a>`;
+  }).join('');
+
+  const mobileNavLinks = NAV_ITEMS.map(item => {
+    const isActive = active === item.slug;
+    const activeClasses = isActive
+      ? 'text-[var(--pc-color-primary)] font-medium bg-[var(--pc-surface-raised)]'
+      : 'text-[var(--pc-text-secondary)] hover:bg-[var(--pc-surface-raised)]';
+    return `<a href="${item.href}" class="block px-3 py-3 text-sm no-underline rounded-md transition-colors ${activeClasses}">${item.label}</a>`;
   }).join('');
 
   return `<!DOCTYPE html>
@@ -117,18 +125,39 @@ export function layout({ title, content, active, bodyExtras = '' }: LayoutOption
 </head>
 <body class="bg-surface-base text-[var(--pc-font-color)] font-sans m-0">
   <nav class="bg-surface-base border-b border-[var(--pc-border-color)] sticky top-0 z-10">
-    <div class="max-w-4xl mx-auto px-6 py-3 flex items-center justify-between gap-4">
-      <a href="/" class="flex items-center gap-2 no-underline text-[var(--pc-font-color)] shrink-0">
-        <img src="${ROCKET_ICON_URL}" alt="" class="rocket-icon" width="32" height="32" style="display:block">
-        <span class="text-lg font-semibold">Launchpad</span>
-      </a>
-      <div class="flex items-center gap-1">
-        ${navLinks}
-        <button onclick="toggleTheme()" title="Toggle light/dark mode"
-          class="ml-2 bg-transparent border-0 cursor-pointer text-[var(--pc-text-muted)] p-2 rounded-lg hover:bg-[var(--pc-surface-raised)] transition-colors shrink-0">
-          <svg id="icon-sun" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="hidden"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
-          <svg id="icon-moon" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
-        </button>
+    <div class="max-w-4xl mx-auto px-6 py-3">
+      <div class="flex items-center justify-between gap-4">
+        <a href="/" class="flex items-center gap-2 no-underline text-[var(--pc-font-color)] shrink-0">
+          <img src="${ROCKET_ICON_URL}" alt="" class="rocket-icon" width="32" height="32" style="display:block">
+          <span class="text-lg font-semibold">Launchpad</span>
+        </a>
+
+        <div class="flex items-center gap-1">
+          <!-- Desktop nav links (hidden below md) -->
+          <div class="hidden md:flex md:items-center md:gap-1">
+            ${desktopNavLinks}
+          </div>
+
+          <!-- Theme toggle (always visible) -->
+          <button onclick="toggleTheme()" title="Toggle light/dark mode"
+            class="md:ml-2 bg-transparent border-0 cursor-pointer text-[var(--pc-text-muted)] p-2 rounded-lg hover:bg-[var(--pc-surface-raised)] transition-colors shrink-0">
+            <svg id="icon-sun" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="hidden"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+            <svg id="icon-moon" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+          </button>
+
+          <!-- Mobile hamburger (hidden above md) -->
+          <button id="menu-button" onclick="toggleMobileMenu()" type="button" aria-expanded="false" aria-controls="mobile-menu" aria-label="Toggle menu"
+            class="md:hidden bg-transparent border-0 cursor-pointer text-[var(--pc-text-muted)] p-2 rounded-lg hover:bg-[var(--pc-surface-raised)] transition-colors shrink-0">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- Mobile menu drawer (collapsed by default, hidden on md+) -->
+      <div id="mobile-menu" class="md:hidden hidden mt-3 pt-3 border-t border-[var(--pc-border-color)]">
+        <div class="flex flex-col gap-1">
+          ${mobileNavLinks}
+        </div>
       </div>
     </div>
   </nav>
@@ -146,6 +175,14 @@ export function layout({ title, content, active, bodyExtras = '' }: LayoutOption
       const dark = !document.documentElement.classList.contains('dark');
       localStorage.setItem('theme', dark ? 'dark' : 'light');
       applyTheme(dark);
+    }
+
+    function toggleMobileMenu() {
+      const menu = document.getElementById('mobile-menu');
+      const button = document.getElementById('menu-button');
+      const expanded = button.getAttribute('aria-expanded') === 'true';
+      menu.classList.toggle('hidden');
+      button.setAttribute('aria-expanded', String(!expanded));
     }
 
     (function() {
