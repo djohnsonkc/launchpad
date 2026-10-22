@@ -9,6 +9,7 @@ import fs from 'fs/promises';
 import { pipeline } from 'stream/promises';
 import { fileURLToPath } from 'url';
 import { upsertApp, deleteApp } from '../lib/store.js';
+import { requireDeployToken } from '../lib/auth.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const APPS_DIR = path.resolve(__dirname, '../../apps');
@@ -28,6 +29,17 @@ const upload = multer({
 
 export const deployRouter = Router();
 
+/** Restricts a folder slug to [a-z0-9-] segments so it can never escape APPS_DIR. */
+function normalizeFolder(raw: unknown): string {
+  return String(raw ?? '')
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9\/-]/g, '-')
+    .split('/')
+    .filter(Boolean)
+    .join('/');
+}
+
 /**
  * POST /api/deploy
  *
@@ -41,7 +53,7 @@ export const deployRouter = Router();
  *
  * Extracts the zip into /apps/<folder>/ and returns the app URL.
  */
-deployRouter.post('/deploy', (req: Request, res: Response, next: NextFunction) => {
+deployRouter.post('/deploy', requireDeployToken, (req: Request, res: Response, next: NextFunction) => {
   upload.single('file')(req, res, (err: unknown) => {
     if (err instanceof multer.MulterError) {
       if (err.code === 'LIMIT_FILE_SIZE') {
@@ -65,7 +77,7 @@ async function handleDeploy(req: Request, res: Response): Promise<void> {
   const tempPath = file?.path;
 
   try {
-    const folder = String(req.body.folder ?? '').trim().toLowerCase().replace(/[^a-z0-9\/-]/g, '-').replace(/^\/|\/$/g, '');
+    const folder = normalizeFolder(req.body.folder);
     const name = String(req.body.name ?? folder).trim();
     const team = String(req.body.team ?? '').trim();
     const creator = String(req.body.creator ?? 'unknown').trim();
@@ -191,9 +203,13 @@ async function extractZipStreaming(zipPath: string, destDir: string): Promise<vo
  *
  * Removes an app and its files.
  */
-deployRouter.delete('/deploy/:folder', async (req: Request, res: Response) => {
+deployRouter.delete('/deploy/:folder', requireDeployToken, async (req: Request, res: Response) => {
   try {
-    const folder = String(req.params.folder);
+    const folder = normalizeFolder(req.params.folder);
+    if (!folder) {
+      res.status(400).json({ error: 'Invalid folder.' });
+      return;
+    }
     const appDir = path.join(APPS_DIR, folder);
 
     await fs.rm(appDir, { recursive: true, force: true });

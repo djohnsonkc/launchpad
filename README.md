@@ -67,8 +67,11 @@ The repo deploys to Heroku with the standard Node.js buildpack. Heroku installs 
 
 ```bash
 heroku create <app-name>
+heroku config:set DEPLOY_TOKEN=$(openssl rand -hex 32)
 git push heroku main
 heroku open
 ```
+
+**Deploy token:** when `DEPLOY_TOKEN` is set, `POST /api/deploy` and `DELETE /api/deploy/:folder` require `Authorization: Bearer <token>`; unauthenticated requests get `401`. Leave it unset for local development. Always set it on a publicly reachable instance — otherwise anyone can upload content to your domain or delete apps. The `/launch` skill sends the token from `LAUNCHPAD_DEPLOY_TOKEN`, and the dashboard prompts for it (once per browser session) when deleting an app.
 
 **Storage caveat:** Heroku dynos have an ephemeral filesystem. Anything written to `apps/` and `data/` is lost whenever the dyno restarts (at least once a day, and on every release), so deployed apps will disappear. Treat a Heroku deployment as a demo environment unless storage is moved to a persistent backend.

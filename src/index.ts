@@ -14,6 +14,9 @@ const ROOT = path.resolve(__dirname, '..');
 const app = express();
 const PORT = parseInt(process.env.PORT || '4000', 10);
 
+// Behind Heroku's router (or any proxy), honor X-Forwarded-Proto so returned URLs use https.
+app.set('trust proxy', 1);
+
 app.use(cors());
 app.use(express.json());
 

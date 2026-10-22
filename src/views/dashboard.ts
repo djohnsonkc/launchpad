@@ -210,7 +210,17 @@ export function renderDashboard(apps: AppMeta[]): string {
 
     document.getElementById('delete-confirm').addEventListener('click', async () => {
       if (!pendingDeleteFolder) return;
-      const res = await fetch('/api/deploy/' + encodeURIComponent(pendingDeleteFolder), { method: 'DELETE' });
+      const url = '/api/deploy/' + encodeURIComponent(pendingDeleteFolder);
+      const send = (token) => fetch(url, { method: 'DELETE', headers: token ? { Authorization: 'Bearer ' + token } : {} });
+      let res = await send(sessionStorage.getItem('deployToken'));
+      // Server has DEPLOY_TOKEN set — ask once per browser session.
+      if (res.status === 401) {
+        const token = prompt('Deploy token required to delete apps:');
+        if (token) {
+          res = await send(token);
+          if (res.ok) sessionStorage.setItem('deployToken', token);
+        }
+      }
       document.getElementById('delete-dialog').close();
       pendingDeleteFolder = null;
       if (res.ok) location.reload();
