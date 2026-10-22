@@ -21,9 +21,9 @@ export function layout({ title, content, active, bodyExtras = '' }: LayoutOption
   const desktopNavLinks = NAV_ITEMS.map(item => {
     const isActive = active === item.slug;
     const activeClasses = isActive
-      ? 'text-[var(--pc-color-primary)] font-medium'
+      ? 'text-[var(--pc-color-primary)] font-medium after:absolute after:left-3 after:right-3 after:-bottom-3 after:h-0.5 after:rounded-full after:bg-[var(--pc-color-primary)]'
       : 'text-[var(--pc-text-secondary)] hover:text-[var(--pc-font-color)]';
-    return `<a href="${item.href}" class="px-3 py-2 text-sm no-underline whitespace-nowrap transition-colors ${activeClasses}">${item.label}</a>`;
+    return `<a href="${item.href}" class="relative px-3 py-2 text-sm no-underline whitespace-nowrap transition-colors ${activeClasses}">${item.label}</a>`;
   }).join('');
 
   const mobileNavLinks = NAV_ITEMS.map(item => {
@@ -47,6 +47,7 @@ export function layout({ title, content, active, bodyExtras = '' }: LayoutOption
   <style>
     :root {
       --pc-color-primary: #3b82f6;
+      --pc-color-primary-strong: #1d5fb4;
       --pc-color-success: #16a34a;
       --pc-color-warning: #d97706;
       --pc-color-danger: #dc2626;
@@ -63,6 +64,7 @@ export function layout({ title, content, active, bodyExtras = '' }: LayoutOption
     }
     html.dark {
       --pc-color-primary: #5ba3d9;
+      --pc-color-primary-strong: #2f6fb5;
       --pc-surface-base: #2a2d31;
       --pc-surface-raised: #36393f;
       --pc-font-color: #D1D5DB;

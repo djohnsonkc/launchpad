@@ -72,66 +72,86 @@ export function renderDashboard(apps: AppMeta[]): string {
     .join('');
 
   const emptyState = apps.length === 0
-    ? `<div class="rounded-lg border-2 border-dashed px-6 py-12 text-center" style="border-color:var(--pc-border-color);background:var(--pc-card-bg);color:var(--pc-text-muted)">
-        <p class="text-sm max-w-prose mx-auto leading-relaxed">No apps deployed yet. Build your app, zip the build output folder, and POST it to <code class="px-1.5 py-0.5 rounded text-sm" style="background:var(--pc-surface-raised)">/api/deploy</code> &mdash; see the <a href="/pitch/tech-leads" class="text-[var(--pc-color-primary)] no-underline hover:underline font-medium">For Tech Leads</a> page for deploy mechanics and APIs.</p>
+    ? `<div class="rounded-xl border-2 border-dashed px-6 py-10 text-center" style="border-color:var(--pc-border-color);background:var(--pc-card-bg)">
+        <div class="w-14 h-14 rounded-full mx-auto mb-4 flex items-center justify-center" style="background:var(--pc-surface-raised);color:var(--pc-text-secondary)">
+          <svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+        </div>
+        <p class="text-base font-semibold text-[var(--pc-font-color)] mb-2">No apps deployed yet.</p>
+        <p class="text-sm max-w-md mx-auto leading-relaxed text-[var(--pc-text-secondary)]">Build your app, zip the build output folder, and POST to <span class="text-[var(--pc-color-primary)]">/api/deploy</span> &mdash; see the <a href="/pitch/tech-leads" class="text-[var(--pc-color-primary)] no-underline hover:underline">For Tech Leads</a> page for deploy mechanics and APIs.</p>
       </div>`
     : '';
 
   const content = `
-  <main class="max-w-4xl mx-auto px-6 py-8">
-    <section class="text-center pt-10 pb-14 mb-10 border-b border-[var(--pc-border-color)]">
-      <p class="font-mono text-xs font-semibold uppercase tracking-[0.2em] text-[var(--pc-text-secondary)] mb-6">
-        No shared runtime. No injection. No iframes.
+  <div class="relative overflow-hidden" style="background:linear-gradient(180deg, color-mix(in srgb, var(--pc-color-primary) 7%, var(--pc-surface-base)) 0%, var(--pc-surface-base) 70%)">
+    <svg aria-hidden="true" class="absolute inset-0 w-full h-full pointer-events-none" viewBox="0 0 1600 700" preserveAspectRatio="none" style="color:var(--pc-color-primary);-webkit-mask-image:linear-gradient(180deg,#000 55%,transparent);mask-image:linear-gradient(180deg,#000 55%,transparent)">
+      <path d="M0 110 C 280 150, 450 420, 560 700 L 0 700 Z" fill="currentColor" opacity="0.06"/>
+      <path d="M0 250 C 190 290, 320 480, 380 700 L 0 700 Z" fill="currentColor" opacity="0.08"/>
+      <path d="M1600 30 C 1370 110, 1250 380, 1190 700 L 1600 700 Z" fill="currentColor" opacity="0.06"/>
+      <path d="M1600 210 C 1450 270, 1370 470, 1340 700 L 1600 700 Z" fill="currentColor" opacity="0.08"/>
+    </svg>
+
+    <section class="relative max-w-3xl mx-auto px-6 pt-16 pb-12 text-center">
+      <p class="font-mono text-xs font-semibold uppercase tracking-[0.25em] text-[var(--pc-color-primary)] mb-5">
+        Independent apps. One Launchpad.
       </p>
-      <h1 class="text-4xl md:text-6xl font-extrabold tracking-tight leading-[1.05] text-[var(--pc-font-color)] max-w-3xl mx-auto mb-6">
-        Is your cross-app coupling masquerading as cohesion?
+      <h1 class="text-4xl md:text-6xl font-bold tracking-tight leading-[1.08] text-[var(--pc-font-color)] mb-6">
+        One home. Many apps.<br>
+        <span class="text-[var(--pc-color-primary)]">Zero coupling.</span>
       </h1>
-      <p class="text-lg leading-relaxed text-[var(--pc-text-secondary)] max-w-2xl mx-auto mb-9">
-        Shell applications, runtime injection, and iframes all deliver a unified UX, but they pay for it with team coordination, fragile host contracts, and changes that ripple across apps. Launchpad hosts each app as a self-contained bundle at its own URL, sharing auth and platform services without sharing a runtime.
+      <p class="text-base md:text-lg leading-relaxed text-[var(--pc-text-secondary)] max-w-2xl mx-auto mb-8">
+        Launchpad brings independently built applications together under one roof, without forcing them to share a framework, runtime, or release cycle. Host unlimited apps from a single deployment, reducing hosting costs while sharing authentication and platform services.
       </p>
-      <div class="flex flex-wrap justify-center gap-3 mb-5">
-        <a href="#apps" class="px-6 py-3 rounded-lg text-sm font-semibold no-underline transition-opacity hover:opacity-85" style="background:var(--pc-font-color);color:var(--pc-surface-base)">Browse deployed apps</a>
-        <a href="/pitch/tech-leads" class="px-6 py-3 rounded-lg text-sm font-semibold no-underline border transition-colors hover:bg-[var(--pc-card-hover)]" style="border-color:var(--pc-font-color);color:var(--pc-font-color)">For Tech Leads</a>
-        <a href="/pitch/exec" class="px-6 py-3 rounded-lg text-sm font-semibold no-underline border transition-colors hover:bg-[var(--pc-card-hover)]" style="border-color:var(--pc-font-color);color:var(--pc-font-color)">For Executives</a>
+      <div class="flex flex-wrap justify-center gap-4 mb-5">
+        <a href="#apps" class="inline-flex items-center gap-2 px-8 py-3 rounded-lg text-sm font-semibold no-underline text-white shadow-sm transition-opacity hover:opacity-90" style="background:var(--pc-color-primary-strong)">
+          Explore Apps
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+        </a>
+        <a href="/pitch/tech-leads" class="inline-flex items-center px-8 py-3 rounded-lg text-sm font-semibold no-underline border transition-colors hover:bg-[var(--pc-card-hover)]" style="border-color:var(--pc-font-color);color:var(--pc-font-color);background:var(--pc-surface-base)">How It Works</a>
       </div>
-      <p class="text-sm text-[var(--pc-text-muted)]">
-        Framework-agnostic. No SDK required. Deploy with a single zip upload.
+      <p class="flex flex-wrap justify-center items-center gap-x-3 gap-y-1 text-sm text-[var(--pc-text-secondary)]">
+        <span>Framework-agnostic</span><span aria-hidden="true" class="text-[var(--pc-text-muted)]">&middot;</span>
+        <span>One host, unlimited apps</span><span aria-hidden="true" class="text-[var(--pc-text-muted)]">&middot;</span>
+        <span>No shared runtime</span>
       </p>
     </section>
 
-    <section class="mb-10">
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div class="rounded-lg border p-4" style="border-color:var(--pc-border-color);background:var(--pc-card-bg)">
-          <div class="flex items-center gap-2 mb-2">
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--pc-color-primary)">
-              <circle cx="6" cy="6" r="2"/><circle cx="6" cy="18" r="2"/><circle cx="18" cy="12" r="2"/><line x1="8" y1="6" x2="16" y2="11"/><line x1="8" y1="18" x2="16" y2="13"/>
-            </svg>
-            <h3 class="text-sm font-semibold text-[var(--pc-font-color)]">One host, separate routes</h3>
+    <section class="relative max-w-6xl mx-auto px-6 pb-10">
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+        <div class="rounded-xl border p-5 flex items-start gap-4 shadow-sm" style="border-color:var(--pc-border-color);background:var(--pc-card-bg)">
+          <div class="w-14 h-14 rounded-xl shrink-0 flex items-center justify-center" style="background:color-mix(in srgb, var(--pc-color-primary) 14%, transparent);color:var(--pc-color-primary)">
+            <svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M19 7V5a2 2 0 0 0-2-2H5a2 2 0 0 0 0 4h15a1 1 0 0 1 1 1v4h-3a2 2 0 0 0 0 4h3a1 1 0 0 0 1-1v-2a1 1 0 0 0-1-1"/><path d="M3 5v14a2 2 0 0 0 2 2h15a1 1 0 0 0 1-1v-4"/></svg>
           </div>
-          <p class="text-xs leading-relaxed text-[var(--pc-text-secondary)]">Each app is a self-contained bundle, served at its own URL under the same host.</p>
+          <div>
+            <h3 class="text-base font-semibold text-[var(--pc-font-color)] mb-1">One host. Lower costs.</h3>
+            <p class="text-sm leading-relaxed text-[var(--pc-text-secondary)]">Serve unlimited independent apps from a single hosting deployment.</p>
+          </div>
         </div>
 
-        <div class="rounded-lg border p-4" style="border-color:var(--pc-border-color);background:var(--pc-card-bg)">
-          <div class="flex items-center gap-2 mb-2">
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--pc-color-primary)">
-              <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
-            </svg>
-            <h3 class="text-sm font-semibold text-[var(--pc-font-color)]">Shared platform services</h3>
+        <div class="rounded-xl border p-5 flex items-start gap-4 shadow-sm" style="border-color:var(--pc-border-color);background:var(--pc-card-bg)">
+          <div class="w-14 h-14 rounded-xl shrink-0 flex items-center justify-center" style="background:color-mix(in srgb, var(--pc-color-accent) 14%, transparent);color:var(--pc-color-accent)">
+            <svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"/><path d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/><path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0"/><path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5"/></svg>
           </div>
-          <p class="text-xs leading-relaxed text-[var(--pc-text-secondary)]">Cookies, auth, user context, and platform services are available across all apps.</p>
+          <div>
+            <h3 class="text-base font-semibold text-[var(--pc-font-color)] mb-1">Deploy independently</h3>
+            <p class="text-sm leading-relaxed text-[var(--pc-text-secondary)]">Build and update each app without redeploying the others.</p>
+          </div>
         </div>
 
-        <div class="rounded-lg border p-4" style="border-color:var(--pc-border-color);background:var(--pc-card-bg)">
-          <div class="flex items-center gap-2 mb-2">
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--pc-color-primary)">
-              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
-            </svg>
-            <h3 class="text-sm font-semibold text-[var(--pc-font-color)]">Fully isolated at runtime</h3>
+        <div class="rounded-xl border p-5 flex items-start gap-4 shadow-sm" style="border-color:var(--pc-border-color);background:var(--pc-card-bg)">
+          <div class="w-14 h-14 rounded-xl shrink-0 flex items-center justify-center" style="background:color-mix(in srgb, var(--pc-color-success) 14%, transparent);color:var(--pc-color-success)">
+            <svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg>
           </div>
-          <p class="text-xs leading-relaxed text-[var(--pc-text-secondary)]">Different React versions, CSS, and dependencies never collide — apps never share a window.</p>
+          <div>
+            <h3 class="text-base font-semibold text-[var(--pc-font-color)] mb-1">Isolated but connected</h3>
+            <p class="text-sm leading-relaxed text-[var(--pc-text-secondary)]">Separate runtimes with shared authentication and platform services.</p>
+          </div>
         </div>
       </div>
     </section>
+  </div>
+
+  <main class="max-w-6xl mx-auto px-6 pb-12">
+    <div class="border-t border-[var(--pc-border-color)] mb-8"></div>
 
     <div id="apps" class="flex items-center justify-between mb-6 scroll-mt-6">
       <h2 class="text-base font-semibold text-[var(--pc-text-secondary)] uppercase tracking-wider">Deployed Apps (${apps.length})</h2>

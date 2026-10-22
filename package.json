@@ -3,6 +3,9 @@
   "version": "1.0.0",
   "description": "Lightweight deployment server for applications. Hosts any pre-built static bundle at a unique URL — framework-agnostic, no SDK required.",
   "type": "module",
+  "engines": {
+    "node": "22.x"
+  },
   "scripts": {
     "dev": "tsx watch src/index.ts",
     "build": "tsc",

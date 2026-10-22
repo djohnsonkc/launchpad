@@ -60,3 +60,15 @@ Each file:
 **Static file store** — `apps/` contains the actual app builds, organized by team and app name (e.g., `apps/marketing/landing-page/`). When a zip is uploaded, the server extracts it into the appropriate directory, automatically flattening single-folder archives (e.g., if the zip contains a `dist/` wrapper, the contents are promoted to the top level). Express serves these as static files with SPA fallback routing, so client-side navigation works out of the box.
 
 Both directories are mounted as Docker volumes in production, ensuring app data persists across container restarts and redeployments.
+
+### Deploying to Heroku
+
+The repo deploys to Heroku with the standard Node.js buildpack. Heroku installs dependencies, runs `npm run build` (TypeScript → `dist/`), and starts the web dyno with `npm start` per the `Procfile`. The server binds to the `PORT` Heroku provides, and the Node version is pinned through `engines` in `package.json`.
+
+```bash
+heroku create <app-name>
+git push heroku main
+heroku open
+```
+
+**Storage caveat:** Heroku dynos have an ephemeral filesystem. Anything written to `apps/` and `data/` is lost whenever the dyno restarts (at least once a day, and on every release), so deployed apps will disappear. Treat a Heroku deployment as a demo environment unless storage is moved to a persistent backend.
