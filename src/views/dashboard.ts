@@ -79,21 +79,28 @@ export function renderDashboard(apps: AppMeta[]): string {
 
   const content = `
   <main class="max-w-4xl mx-auto px-6 py-8">
-    <section class="mb-10">
-      <div class="border-l-4 pl-4 mb-5" style="border-color:var(--pc-color-primary)">
-        <p class="text-sm leading-relaxed text-[var(--pc-text-secondary)] mb-2">
-          <strong><em>Shell applications</em></strong>, <strong><em>runtime injection</em></strong>, and <strong><em>iframes</em></strong> all deliver a unified UX, but they pay for it the same way:
-        </p>
-        <p class="text-base font-semibold italic text-[var(--pc-font-color)]">
-          Cross-app coupling masquerading as cohesion.
-        </p>
-      </div>
-
-      <p class="text-sm leading-relaxed text-[var(--pc-text-secondary)] mb-5">
-        Launchpad sidesteps those tradeoffs entirely: <strong>no shared runtime, no injection, no iframes.</strong>
+    <section class="text-center pt-10 pb-14 mb-10 border-b border-[var(--pc-border-color)]">
+      <p class="font-mono text-xs font-semibold uppercase tracking-[0.2em] text-[var(--pc-text-secondary)] mb-6">
+        No shared runtime. No injection. No iframes.
       </p>
+      <h1 class="text-4xl md:text-6xl font-extrabold tracking-tight leading-[1.05] text-[var(--pc-font-color)] max-w-3xl mx-auto mb-6">
+        Is your cross-app coupling masquerading as cohesion?
+      </h1>
+      <p class="text-lg leading-relaxed text-[var(--pc-text-secondary)] max-w-2xl mx-auto mb-9">
+        Shell applications, runtime injection, and iframes all deliver a unified UX, but they pay for it with team coordination, fragile host contracts, and changes that ripple across apps. Launchpad hosts each app as a self-contained bundle at its own URL, sharing auth and platform services without sharing a runtime.
+      </p>
+      <div class="flex flex-wrap justify-center gap-3 mb-5">
+        <a href="#apps" class="px-6 py-3 rounded-lg text-sm font-semibold no-underline transition-opacity hover:opacity-85" style="background:var(--pc-font-color);color:var(--pc-surface-base)">Browse deployed apps</a>
+        <a href="/pitch/tech-leads" class="px-6 py-3 rounded-lg text-sm font-semibold no-underline border transition-colors hover:bg-[var(--pc-card-hover)]" style="border-color:var(--pc-font-color);color:var(--pc-font-color)">For Tech Leads</a>
+        <a href="/pitch/exec" class="px-6 py-3 rounded-lg text-sm font-semibold no-underline border transition-colors hover:bg-[var(--pc-card-hover)]" style="border-color:var(--pc-font-color);color:var(--pc-font-color)">For Executives</a>
+      </div>
+      <p class="text-sm text-[var(--pc-text-muted)]">
+        Framework-agnostic. No SDK required. Deploy with a single zip upload.
+      </p>
+    </section>
 
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-5">
+    <section class="mb-10">
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div class="rounded-lg border p-4" style="border-color:var(--pc-border-color);background:var(--pc-card-bg)">
           <div class="flex items-center gap-2 mb-2">
             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--pc-color-primary)">
@@ -124,13 +131,9 @@ export function renderDashboard(apps: AppMeta[]): string {
           <p class="text-xs leading-relaxed text-[var(--pc-text-secondary)]">Different React versions, CSS, and dependencies never collide — apps never share a window.</p>
         </div>
       </div>
-
-      <p class="text-xs text-[var(--pc-text-muted)]">
-        Learn more: <a href="/pitch/tech-leads" class="text-[var(--pc-color-primary)] no-underline hover:underline font-medium">For Tech Leads</a> (deploy mechanics + APIs) · <a href="/pitch/exec" class="text-[var(--pc-color-primary)] no-underline hover:underline font-medium">For Executives</a>
-      </p>
     </section>
 
-    <div class="flex items-center justify-between mb-6">
+    <div id="apps" class="flex items-center justify-between mb-6 scroll-mt-6">
       <h2 class="text-base font-semibold text-[var(--pc-text-secondary)] uppercase tracking-wider">Deployed Apps (${apps.length})</h2>
       <div class="flex items-center gap-1">
         <button onclick="setView('grid')" id="btn-grid" title="Grid view"
