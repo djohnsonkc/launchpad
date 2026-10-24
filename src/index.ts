@@ -68,7 +68,7 @@ app.get('/pitch/product', async (_req, res, next) => {
   try {
     const html = await renderMarkdownPage({
       filePath: path.join(ROOT, 'docs', 'pitch-product.md'),
-      title: 'For Product Teams — Launchpad',
+      title: 'Product Teams — Launchpad',
       active: 'product',
     });
     res.type('html').send(html);
@@ -81,7 +81,7 @@ app.get('/pitch/tech-leads', async (_req, res, next) => {
   try {
     const html = await renderMarkdownPage({
       filePath: path.join(ROOT, 'docs', 'pitch-tech-leads.md'),
-      title: 'For Tech Leads — Launchpad',
+      title: 'Engineers — Launchpad',
       active: 'tech-leads',
     });
     res.type('html').send(html);
@@ -94,7 +94,7 @@ app.get('/pitch/exec', async (_req, res, next) => {
   try {
     const html = await renderMarkdownPage({
       filePath: path.join(ROOT, 'docs', 'pitch-exec.md'),
-      title: 'For Executives — Launchpad',
+      title: 'Executives — Launchpad',
       active: 'exec',
     });
     res.type('html').send(html);

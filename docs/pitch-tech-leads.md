@@ -1,4 +1,4 @@
-# Launchpad — Pitch (for tech leads)
+# Launchpad — For Engineers
 
 ## The problem with how we unify frontends today
 

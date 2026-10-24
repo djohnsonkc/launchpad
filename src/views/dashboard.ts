@@ -77,7 +77,7 @@ export function renderDashboard(apps: AppMeta[]): string {
           <svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
         </div>
         <p class="text-base font-semibold text-[var(--pc-font-color)] mb-2">No apps deployed yet.</p>
-        <p class="text-sm max-w-md mx-auto leading-relaxed text-[var(--pc-text-secondary)]">Build your app, zip the build output folder, and POST to <span class="text-[var(--pc-color-primary)]">/api/deploy</span> &mdash; see the <a href="/pitch/tech-leads" class="text-[var(--pc-color-primary)] no-underline hover:underline">For Tech Leads</a> page for deploy mechanics and APIs.</p>
+        <p class="text-sm max-w-md mx-auto leading-relaxed text-[var(--pc-text-secondary)]">Build your app, zip the build output folder, and POST to <span class="text-[var(--pc-color-primary)]">/api/deploy</span> &mdash; see the <a href="/pitch/tech-leads" class="text-[var(--pc-color-primary)] no-underline hover:underline">Engineers</a> page for deploy mechanics and APIs.</p>
       </div>`
     : '';
 

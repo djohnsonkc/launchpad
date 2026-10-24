@@ -13,9 +13,9 @@ const ROCKET_ICON_URL = '/rocket.svg';
 
 const NAV_ITEMS: { slug: NavSlug; label: string; href: string }[] = [
   { slug: 'home', label: 'Home', href: '/' },
-  { slug: 'product', label: 'For Product Teams', href: '/pitch/product' },
-  { slug: 'tech-leads', label: 'For Tech Leads', href: '/pitch/tech-leads' },
-  { slug: 'exec', label: 'For Executives', href: '/pitch/exec' },
+  { slug: 'product', label: 'Product Teams', href: '/pitch/product' },
+  { slug: 'tech-leads', label: 'Engineers', href: '/pitch/tech-leads' },
+  { slug: 'exec', label: 'Executives', href: '/pitch/exec' },
 ];
 
 export function layout({ title, content, active, bodyExtras = '' }: LayoutOptions): string {

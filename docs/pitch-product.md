@@ -45,4 +45,4 @@ Prototypes are meant to move fast, so treat what you deploy as you would any sha
 
 A prototype on Launchpad isn't a dead end. Because it's a real, running app, engineering can pick up exactly what you validated — the flows, the interactions, the edge cases you discovered — rather than reinterpreting a static mockup. When an idea graduates, it can keep living on Launchpad as a production app, deployed and released independently by the team that owns it.
 
-Curious how it works under the hood? See [For Tech Leads](/pitch/tech-leads). Making the case for the platform? See [For Executives](/pitch/exec).
+Curious how it works under the hood? See [Engineers](/pitch/tech-leads). Making the case for the platform? See [Executives](/pitch/exec).
