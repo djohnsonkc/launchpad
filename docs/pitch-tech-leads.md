@@ -18,6 +18,32 @@ Launchpad sidesteps those tradeoffs entirely: **no shared runtime, no injection,
 
 **The server doesn't need to know React exists.** React, Vue, Svelte, Solid, even plain HTML all work the same way. Launchpad is accidentally framework-agnostic.
 
+## Launchpad vs. Module Federation
+
+Module Federation (webpack 5, Rspack, or Vite plugins) is the most common form of runtime injection. A *host* app loads JavaScript modules from separately deployed *remotes* at runtime and renders them inside its own page. Teams deploy independently, but everything runs in **one document**: one `window`, one React instance, one router.
+
+Launchpad combines apps at the **page** level instead. Each app is its own document at its own URL; moving between apps is a normal page load. Apps share the domain (so cookies and auth carry over) and platform services, and nothing else.
+
+| | Module Federation | Launchpad |
+|---|---|---|
+| Unit of composition | Components / modules | Whole apps (pages) |
+| Multiple teams on one screen | Yes | No — one app per page |
+| Moving between apps | Seamless in-app navigation | Full page load |
+| Shared dependencies | Downloaded once, shared singletons | Each app ships its own |
+| Version coupling | Shared libraries must stay compatible (e.g. matching React versions) | None — React 17, React 19, Vue, and plain HTML coexist |
+| Build tooling | Federation-aware bundler and config in every app | Anything that outputs static files |
+| Contract between teams | Exposed modules, props, and shared versions, all checked at runtime | A folder of static files that works under a URL prefix |
+| Blast radius of a bad deploy | A broken remote can break the host page | Only that app |
+| Local development | Usually needs the host and some remotes running | Each app runs on its own |
+
+**Choose federation** when you genuinely need several teams' code on the same screen — a dashboard built from independently owned widgets, say — or when the whole product must behave as one seamless single-page app, and the teams can commit to coordinating shared library versions.
+
+**Choose Launchpad** when each team owns a whole app or page, which describes most products and nearly all prototypes. You trade in-page composition and shared bundles for zero version coordination, any framework, and failures that stay contained.
+
+The honest cost of Launchpad's model is cross-app UI such as a shared top nav. It comes from a component library every app builds in (simple, but an update means rebuilding each app) or a small script every app loads (no rebuilds, but a little runtime coupling). The site-independent top nav described below is where that tradeoff is made deliberately.
+
+The two aren't mutually exclusive: a federation remote is just static files, so Launchpad can host federated apps. Page-level separation can be the default, with federation reserved for the one area that truly needs it.
+
 ## Consistency, where it matters
 
 Most apps should use the organization's shared component library and Tailwind-based design system. That's the default teams should reach for. But Launchpad does not technically require a specific UI framework or component library — apps that have a legitimate reason to use something else can, without the host needing to care.
