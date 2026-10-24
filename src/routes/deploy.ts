@@ -1,20 +1,20 @@
 import { Router, type Request, type Response, type NextFunction } from 'express';
 import multer from 'multer';
-import unzipper from 'unzipper';
 import path from 'path';
 import os from 'os';
 import crypto from 'crypto';
-import { createWriteStream } from 'fs';
 import fs from 'fs/promises';
-import { pipeline } from 'stream/promises';
-import { fileURLToPath } from 'url';
-import { upsertApp, deleteApp } from '../lib/store.js';
+import { upsertApp, deleteApp, getApp, type AppMeta } from '../lib/store.js';
 import { requireDeployToken } from '../lib/auth.js';
+import {
+  APPS_DIR, normalizeFolder, sha256File, extractToStaging, installStaged, discardStaged,
+} from '../lib/bundle.js';
+import { isArchiveEnabled, uploadBundle, deleteBundle } from '../lib/archive.js';
+import { isRestoring } from '../lib/restore.js';
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const APPS_DIR = path.resolve(__dirname, '../../apps');
-
-const MAX_UPLOAD_BYTES = 1024 * 1024 * 1024; // 1 GB
+// Default 100 MB: keeps dyno memory/disk safe and fits the archive's request limit.
+const MAX_UPLOAD_MB = parseInt(process.env.MAX_UPLOAD_MB || '100', 10);
+const MAX_UPLOAD_BYTES = MAX_UPLOAD_MB * 1024 * 1024;
 
 const upload = multer({
   storage: multer.diskStorage({
@@ -29,15 +29,13 @@ const upload = multer({
 
 export const deployRouter = Router();
 
-/** Restricts a folder slug to [a-z0-9-] segments so it can never escape APPS_DIR. */
-function normalizeFolder(raw: unknown): string {
-  return String(raw ?? '')
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9\/-]/g, '-')
-    .split('/')
-    .filter(Boolean)
-    .join('/');
+/** Writes during startup restore could race with it, so ask the client to retry. */
+function rejectWhileRestoring(_req: Request, res: Response, next: NextFunction): void {
+  if (isRestoring()) {
+    res.set('Retry-After', '30').status(503).json({ error: 'Launchpad is restoring apps from the archive. Retry shortly.' });
+    return;
+  }
+  next();
 }
 
 /**
@@ -51,14 +49,15 @@ function normalizeFolder(raw: unknown): string {
  *   - creator: who deployed it
  *   - description: optional description
  *
- * Extracts the zip into /apps/<folder>/ and returns the app URL.
+ * Extracts the zip into /apps/<folder>/ and returns the app URL. When the
+ * archive is configured, the zip is persisted there before the new version
+ * goes live; if that fails, the previous version stays untouched.
  */
-deployRouter.post('/deploy', requireDeployToken, (req: Request, res: Response, next: NextFunction) => {
+deployRouter.post('/deploy', requireDeployToken, rejectWhileRestoring, (req: Request, res: Response, next: NextFunction) => {
   upload.single('file')(req, res, (err: unknown) => {
     if (err instanceof multer.MulterError) {
       if (err.code === 'LIMIT_FILE_SIZE') {
-        const gb = MAX_UPLOAD_BYTES / 1024 / 1024 / 1024;
-        res.status(413).json({ error: `File too large. Maximum size is ${gb}GB.` });
+        res.status(413).json({ error: `File too large. Maximum size is ${MAX_UPLOAD_MB}MB.` });
         return;
       }
       res.status(400).json({ error: err.message });
@@ -75,6 +74,7 @@ deployRouter.post('/deploy', requireDeployToken, (req: Request, res: Response, n
 async function handleDeploy(req: Request, res: Response): Promise<void> {
   const file = req.file;
   const tempPath = file?.path;
+  let staged: string | null = null;
 
   try {
     const folder = normalizeFolder(req.body.folder);
@@ -93,26 +93,47 @@ async function handleDeploy(req: Request, res: Response): Promise<void> {
       return;
     }
 
-    const appDir = path.join(APPS_DIR, folder);
-    await fs.rm(appDir, { recursive: true, force: true });
-    await fs.mkdir(appDir, { recursive: true });
-
-    await extractZipStreaming(tempPath!, appDir);
+    // Extracting to staging first validates the zip without touching the live app.
+    try {
+      staged = await extractToStaging(tempPath!);
+    } catch (err) {
+      console.error('Extract error:', err);
+      res.status(400).json({ error: 'Could not extract the uploaded file. Is it a valid zip?' });
+      return;
+    }
 
     const host = req.get('host') || 'localhost:4000';
-    const protocol = req.protocol;
-    const url = `${protocol}://${host}/apps/${folder}/`;
+    const url = `${req.protocol}://${host}/apps/${folder}/`;
+    const now = new Date().toISOString();
+    const existing = await getApp(folder);
+    const bundleSha256 = await sha256File(tempPath!);
 
-    await upsertApp({
+    const meta: AppMeta = {
       folder,
       name,
       team,
       creator,
       description,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
+      createdAt: existing?.createdAt ?? now,
+      updatedAt: now,
       url,
-    });
+      bundleSha256,
+    };
+
+    if (isArchiveEnabled()) {
+      try {
+        await uploadBundle(tempPath!, meta, bundleSha256);
+      } catch (err) {
+        console.error('Archive upload error:', err);
+        const reason = err instanceof Error ? ` (${err.message})` : '';
+        res.status(502).json({ error: `Failed to persist the app to the archive${reason}. The previous version (if any) is still live.` });
+        return;
+      }
+    }
+
+    await installStaged(staged, folder);
+    staged = null;
+    await upsertApp(meta);
 
     res.json({
       success: true,
@@ -125,6 +146,7 @@ async function handleDeploy(req: Request, res: Response): Promise<void> {
     console.error('Deploy error:', err);
     res.status(500).json({ error: 'Failed to deploy app.' });
   } finally {
+    if (staged) await discardStaged(staged).catch(() => { /* best effort */ });
     if (tempPath) {
       await fs.unlink(tempPath).catch(() => { /* ignore — already gone */ });
     }
@@ -132,91 +154,35 @@ async function handleDeploy(req: Request, res: Response): Promise<void> {
 }
 
 /**
- * Stream-extracts a zip file into destDir. Memory usage stays flat regardless of
- * archive size — entries are piped one at a time straight to disk.
- *
- * Also handles two concerns the AdmZip version didn't:
- *   - **Wrapper-folder flatten** detected up front from the central directory
- *     (rather than after-the-fact via fs.rename), so we never write the wrapper
- *     to disk in the first place.
- *   - **Zip-slip protection** — entries whose resolved target escapes destDir
- *     are rejected before any bytes get written.
- */
-async function extractZipStreaming(zipPath: string, destDir: string): Promise<void> {
-  const directory = await unzipper.Open.file(zipPath);
-
-  // PowerShell's Compress-Archive (commonly used by Windows deploy clients)
-  // writes entry paths with backslash separators, violating the zip spec.
-  // Normalize once up front so the rest of the logic — wrapper detection,
-  // path.join, zip-slip checks — works correctly on both Linux and Windows.
-  const normalized = directory.files.map(entry => ({
-    entry,
-    path: entry.path.replace(/\\/g, '/'),
-  }));
-
-  // Detect wrapper folder: all entries share a single top-level segment AND
-  // no entry is a file at the root level.
-  const topLevelSegments = new Set<string>();
-  let hasRootFiles = false;
-  for (const { entry, path: p } of normalized) {
-    const segments = p.split('/').filter(Boolean);
-    if (segments.length === 0) continue;
-    const isDir = entry.type === 'Directory' || p.endsWith('/');
-    if (segments.length === 1 && !isDir) hasRootFiles = true;
-    topLevelSegments.add(segments[0]);
-  }
-
-  const stripPrefix = (!hasRootFiles && topLevelSegments.size === 1)
-    ? Array.from(topLevelSegments)[0] + '/'
-    : '';
-
-  const resolvedDest = path.resolve(destDir);
-
-  for (const { entry, path: p } of normalized) {
-    let relativePath = p;
-    if (stripPrefix) {
-      if (!relativePath.startsWith(stripPrefix)) continue;
-      relativePath = relativePath.slice(stripPrefix.length);
-    }
-    if (!relativePath) continue; // skip the wrapper directory entry itself
-
-    const targetPath = path.join(destDir, relativePath);
-    const resolved = path.resolve(targetPath);
-
-    // Zip-slip protection: target must stay within destDir
-    if (resolved !== resolvedDest && !resolved.startsWith(resolvedDest + path.sep)) {
-      throw new Error(`Zip entry escapes destination: ${entry.path}`);
-    }
-
-    const isDir = entry.type === 'Directory' || p.endsWith('/');
-    if (isDir) {
-      await fs.mkdir(targetPath, { recursive: true });
-    } else {
-      await fs.mkdir(path.dirname(targetPath), { recursive: true });
-      await pipeline(entry.stream(), createWriteStream(targetPath));
-    }
-  }
-}
-
-/**
  * DELETE /api/deploy/:folder
  *
- * Removes an app and its files.
+ * Removes an app and its files. When the archive is configured it is deleted
+ * there first, so a failure never leaves an app that would be resurrected on
+ * the next restart.
  */
-deployRouter.delete('/deploy/:folder', requireDeployToken, async (req: Request, res: Response) => {
+deployRouter.delete('/deploy/:folder', requireDeployToken, rejectWhileRestoring, async (req: Request, res: Response) => {
   try {
     const folder = normalizeFolder(req.params.folder);
     if (!folder) {
       res.status(400).json({ error: 'Invalid folder.' });
       return;
     }
-    const appDir = path.join(APPS_DIR, folder);
 
-    await fs.rm(appDir, { recursive: true, force: true });
+    let archived = false;
+    if (isArchiveEnabled()) {
+      try {
+        archived = await deleteBundle(folder);
+      } catch (err) {
+        console.error('Archive delete error:', err);
+        res.status(502).json({ error: 'Failed to delete the app from the archive. Nothing was removed.' });
+        return;
+      }
+    }
 
+    await fs.rm(path.join(APPS_DIR, folder), { recursive: true, force: true });
     const deleted = await deleteApp(folder);
 
-    if (deleted) {
+    if (deleted || archived) {
       res.json({ success: true, message: `App "${folder}" deleted.` });
     } else {
       res.status(404).json({ error: `App "${folder}" not found.` });

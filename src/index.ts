@@ -7,6 +7,8 @@ import { appsRouter } from './routes/apps.js';
 import { renderDashboard } from './views/dashboard.js';
 import { renderMarkdownPage } from './views/page.js';
 import { getAppList } from './lib/store.js';
+import { isArchiveEnabled } from './lib/archive.js';
+import { isRestoring, restoreFromArchive } from './lib/restore.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '..');
@@ -49,6 +51,12 @@ app.use('/apps/:name', (req, res, next) => {
   });
 });
 
+// While startup restore is running, a missing app is "not yet", not "never".
+app.use('/apps', (_req, res, next) => {
+  if (!isRestoring()) return next();
+  res.set('Retry-After', '15').status(503).type('text').send('Launchpad is restoring apps after a restart. Refresh in a few seconds.');
+});
+
 // ─── Dashboard ───────────────────────────────────────────────
 app.get('/', async (_req, res) => {
   const apps = await getAppList();
@@ -56,6 +64,19 @@ app.get('/', async (_req, res) => {
 });
 
 // ─── Content pages (rendered from markdown) ──────────────────
+app.get('/pitch/product', async (_req, res, next) => {
+  try {
+    const html = await renderMarkdownPage({
+      filePath: path.join(ROOT, 'docs', 'pitch-product.md'),
+      title: 'For Product Teams — Launchpad',
+      active: 'product',
+    });
+    res.type('html').send(html);
+  } catch (err) {
+    next(err);
+  }
+});
+
 app.get('/pitch/tech-leads', async (_req, res, next) => {
   try {
     const html = await renderMarkdownPage({
@@ -86,4 +107,7 @@ app.get('/pitch/exec', async (_req, res, next) => {
 app.listen(PORT, () => {
   console.log(`Launchpad running at http://localhost:${PORT}`);
   console.log(`Deploy endpoint: POST http://localhost:${PORT}/api/deploy`);
+  console.log(isArchiveEnabled() ? `Archive: ${process.env.ARCHIVE_URL}` : 'Archive: not configured (local storage only)');
+  // Restore after binding PORT — Heroku kills dynos that take longer than 60s to bind.
+  void restoreFromArchive();
 });

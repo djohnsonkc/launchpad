@@ -16,6 +16,8 @@ export interface AppMeta {
   createdAt: string;
   updatedAt: string;
   url: string;
+  /** sha256 of the deployed zip — lets startup restore skip apps already current. */
+  bundleSha256?: string;
 }
 
 async function ensureMetaDir(): Promise<void> {
@@ -49,6 +51,14 @@ export async function getAppList(): Promise<AppMeta[]> {
     }
   }
   return results;
+}
+
+export async function getApp(folder: string): Promise<AppMeta | null> {
+  try {
+    return JSON.parse(await fs.readFile(metaFilePath(folder), 'utf-8')) as AppMeta;
+  } catch {
+    return null;
+  }
 }
 
 export async function upsertApp(meta: AppMeta): Promise<void> {

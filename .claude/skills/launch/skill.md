@@ -238,7 +238,7 @@ Important notes:
 - **Sanitize Unicode in `name` and `description`.** Replace em dashes (`—`), curly quotes, and other non-ASCII characters with ASCII equivalents before passing to `curl`. Git Bash on Windows corrupts non-ASCII characters in `-F` arguments.
 - **Parse the JSON response.** On success, it contains `{ success: true, folder, name, url, message }`. On failure, it returns a non-2xx with `{ error }`.
 - **If you get `401`**, the server requires a deploy token. Tell the user to set `LAUNCHPAD_DEPLOY_TOKEN` and stop.
-- **If you get `413 Payload Too Large`**, the bundle is over Launchpad's 1 GB cap. Tell the user and stop. See [docs/scaling.md](../../docs/scaling.md).
+- **If you get `413 Payload Too Large`**, the bundle is over Launchpad's upload cap (100 MB by default, set by the server's `MAX_UPLOAD_MB`). Tell the user and stop. See [docs/scaling.md](../../docs/scaling.md).
 
 ### Step 10: Update the cache
 

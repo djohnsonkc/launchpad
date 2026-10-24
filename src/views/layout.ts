@@ -1,4 +1,4 @@
-export type NavSlug = 'home' | 'tech-leads' | 'exec';
+export type NavSlug = 'home' | 'product' | 'tech-leads' | 'exec';
 
 interface LayoutOptions {
   title: string;
@@ -13,6 +13,7 @@ const ROCKET_ICON_URL = '/rocket.svg';
 
 const NAV_ITEMS: { slug: NavSlug; label: string; href: string }[] = [
   { slug: 'home', label: 'Home', href: '/' },
+  { slug: 'product', label: 'For Product Teams', href: '/pitch/product' },
   { slug: 'tech-leads', label: 'For Tech Leads', href: '/pitch/tech-leads' },
   { slug: 'exec', label: 'For Executives', href: '/pitch/exec' },
 ];
@@ -55,6 +56,7 @@ export function layout({ title, content, active, bodyExtras = '' }: LayoutOption
       --pc-surface-base: #ffffff;
       --pc-surface-raised: #f9fafb;
       --pc-font-color: #111827;
+      --pc-heading-color: #0f1e3d;
       --pc-font-color-on-surface: #111827;
       --pc-border-color: #e5e7eb;
       --pc-text-muted: #9ca3af;
@@ -68,6 +70,7 @@ export function layout({ title, content, active, bodyExtras = '' }: LayoutOption
       --pc-surface-base: #2a2d31;
       --pc-surface-raised: #36393f;
       --pc-font-color: #D1D5DB;
+      --pc-heading-color: #E5E7EB;
       --pc-font-color-on-surface: #333;
       --pc-border-color: #374151;
       --pc-text-muted: #6b7280;
@@ -103,10 +106,11 @@ export function layout({ title, content, active, bodyExtras = '' }: LayoutOption
     .markdown-content strong { font-weight: 600; }
   </style>
   <script>
-    // Apply theme early to prevent flash
+    // Apply theme early to prevent flash. Dark is the default; the nav toggle saves an override.
     (function() {
-      var saved = localStorage.getItem('theme');
-      if (saved === 'dark' || (!saved && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+      var saved = null;
+      try { saved = localStorage.getItem('theme'); } catch (e) {}
+      if (saved !== 'light') {
         document.documentElement.classList.add('dark');
       }
     })();
@@ -175,7 +179,7 @@ export function layout({ title, content, active, bodyExtras = '' }: LayoutOption
 
     function toggleTheme() {
       const dark = !document.documentElement.classList.contains('dark');
-      localStorage.setItem('theme', dark ? 'dark' : 'light');
+      try { localStorage.setItem('theme', dark ? 'dark' : 'light'); } catch (e) {}
       applyTheme(dark);
     }
 
@@ -188,9 +192,9 @@ export function layout({ title, content, active, bodyExtras = '' }: LayoutOption
     }
 
     (function() {
-      const saved = localStorage.getItem('theme');
-      const prefersDark = saved === 'dark' || (!saved && window.matchMedia('(prefers-color-scheme: dark)').matches);
-      applyTheme(prefersDark);
+      let saved = null;
+      try { saved = localStorage.getItem('theme'); } catch (e) {}
+      applyTheme(saved !== 'light');
     })();
   </script>
   ${bodyExtras}

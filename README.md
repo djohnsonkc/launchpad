@@ -59,7 +59,7 @@ Each file:
 
 **Static file store** — `apps/` contains the actual app builds, organized by team and app name (e.g., `apps/marketing/landing-page/`). When a zip is uploaded, the server extracts it into the appropriate directory, automatically flattening single-folder archives (e.g., if the zip contains a `dist/` wrapper, the contents are promoted to the top level). Express serves these as static files with SPA fallback routing, so client-side navigation works out of the box.
 
-Both directories are mounted as Docker volumes in production, ensuring app data persists across container restarts and redeployments.
+Both directories are mounted as Docker volumes in production, ensuring app data persists across container restarts and redeployments. On hosts without persistent disks (Heroku), the optional bundle archive restores them on startup — see [Deploying to Heroku](#deploying-to-heroku).
 
 ### Deploying to Heroku
 
@@ -68,10 +68,19 @@ The repo deploys to Heroku with the standard Node.js buildpack. Heroku installs 
 ```bash
 heroku create <app-name>
 heroku config:set DEPLOY_TOKEN=$(openssl rand -hex 32)
+heroku config:set ARCHIVE_URL=https://inspiredeffect.com/launchpad.ashx ARCHIVE_TOKEN=<contents of the archive's token.txt>
 git push heroku main
 heroku open
 ```
 
 **Deploy token:** when `DEPLOY_TOKEN` is set, `POST /api/deploy` and `DELETE /api/deploy/:folder` require `Authorization: Bearer <token>`; unauthenticated requests get `401`. Leave it unset for local development. Always set it on a publicly reachable instance — otherwise anyone can upload content to your domain or delete apps. The `/launch` skill sends the token from `LAUNCHPAD_DEPLOY_TOKEN`, and the dashboard prompts for it (once per browser session) when deleting an app.
 
-**Storage caveat:** Heroku dynos have an ephemeral filesystem. Anything written to `apps/` and `data/` is lost whenever the dyno restarts (at least once a day, and on every release), so deployed apps will disappear. Treat a Heroku deployment as a demo environment unless storage is moved to a persistent backend.
+**Persistent storage (bundle archive):** Heroku dynos have an ephemeral filesystem — `apps/` and `data/` are wiped whenever the dyno restarts (at least daily, and on every release). With `ARCHIVE_URL` and `ARCHIVE_TOKEN` set, Launchpad keeps a durable copy of every deployed zip and its metadata in the bundle archive (a single `launchpad.ashx` page on inspiredeffect.com, stored under its `App_Data/launchpad/`):
+
+- **Deploy** extracts to a staging folder, uploads the zip to the archive, and only then swaps the new version live. If the archive upload fails, the deploy returns `502` and the previous version stays live.
+- **Startup** binds `PORT` immediately, then restores any app that is missing or out of date (by sha256) from the archive, three at a time. Until restore finishes, requests for not-yet-restored apps get `503` with `Retry-After`, as do deploys and deletes.
+- **Delete** removes the app from the archive first, then locally; if the archive is unreachable nothing is removed.
+
+Without those variables Launchpad uses local storage only, exactly as before. See [docs/persistence.md](docs/persistence.md) for the design and the [setup runbook](docs/persistence.md#runbook-heroku-bundle-archive). Run a single dyno — dynos don't share a filesystem.
+
+**Upload limit:** 100 MB by default, configurable with `MAX_UPLOAD_MB`. When the archive is enabled, the archive page is also bound by ASP.NET's default request limit of **4 MB** — larger deploys fail with a `502` naming the archive's `413`. Raising it needs a `maxRequestLength` setting on the inspiredeffect.com side ([how](docs/persistence.md#4-upload-size-the-4-mb-limit)).

@@ -6,14 +6,25 @@ Operational limits and the reasoning behind them. Add a new dated entry under **
 
 | Concern | Limit | Where it's set |
 |---|---|---|
-| Max upload size | 1 GB | [src/routes/deploy.ts](../src/routes/deploy.ts) — `MAX_UPLOAD_BYTES` |
+| Max upload size | 100 MB default, `MAX_UPLOAD_MB` env var | [src/routes/deploy.ts](../src/routes/deploy.ts) — `MAX_UPLOAD_BYTES` |
 | Upload memory model | Streamed to disk (`os.tmpdir()`) | [src/routes/deploy.ts](../src/routes/deploy.ts) — multer `diskStorage()` |
-| Extraction memory model | Streamed entry-by-entry (constant heap) | [src/routes/deploy.ts](../src/routes/deploy.ts) — `extractZipStreaming` via `unzipper` |
+| Extraction memory model | Streamed entry-by-entry (constant heap) | [src/lib/bundle.ts](../src/lib/bundle.ts) — `extractZipStreaming` via `unzipper` |
+| Archive upload memory model | Zip buffered in memory for the upload (bounded by the upload cap) | [src/lib/archive.ts](../src/lib/archive.ts) — `uploadBundle` |
 | Oversized upload response | `413 Payload Too Large` with clear message | [src/routes/deploy.ts](../src/routes/deploy.ts) — `LIMIT_FILE_SIZE` handler |
 | Concurrent uploads | Unbounded | No app-level cap |
 | Persistent storage | Docker volumes for `apps/` and `data/` | [Dockerfile](../Dockerfile), see also [persistence.md](./persistence.md) |
 
 ## Decisions
+
+### Decision: Lower the default cap to 100 MB, configurable
+
+- **Date:** 2026-10-24
+- **Status:** Implemented
+
+**Context.** Launchpad now targets a single Heroku dyno (512 MB RAM, ephemeral disk) with bundles persisted to the inspiredeffect.com archive, which runs on shared IIS hosting. A 1 GB ceiling no longer fits: the archive upload buffers the zip in memory, and the archive page (a single `launchpad.ashx` with no config of its own) inherits ASP.NET's default 4 MB request limit.
+
+**Decision.** Default `MAX_UPLOAD_MB` to 100. With the archive enabled, the effective cap is 4 MB until the inspiredeffect.com side raises `maxRequestLength` (KB) and IIS `maxAllowedContentLength` (bytes) — see the runbook in [persistence.md](./persistence.md#4-upload-size-the-4-mb-limit). Bundles beyond ~100 MB (e.g. the 306 MB `dashboard-site` bundle from the decision below) should also switch `uploadBundle` to a streamed body first.
+
 
 ### Decision: 1GB cap with disk-based uploads and streaming extraction
 
