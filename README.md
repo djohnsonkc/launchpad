@@ -63,6 +63,8 @@ Both directories are mounted as Docker volumes in production, ensuring app data 
 
 ### Deploying to Heroku
 
+**Production:** https://launchpad.inspiredeffect.com. Hosting, DNS, TLS, and config details are recorded in [docs/deployment.md](docs/deployment.md).
+
 The repo deploys to Heroku with the standard Node.js buildpack. Heroku installs dependencies, runs `npm run build` (TypeScript → `dist/`), and starts the web dyno with `npm start` per the `Procfile`. The server binds to the `PORT` Heroku provides, and the Node version is pinned through `engines` in `package.json`.
 
 ```bash

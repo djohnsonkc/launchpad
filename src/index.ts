@@ -4,6 +4,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { deployRouter } from './routes/deploy.js';
 import { appsRouter } from './routes/apps.js';
+import { skillRouter } from './routes/skill.js';
 import { renderDashboard } from './views/dashboard.js';
 import { renderMarkdownPage } from './views/page.js';
 import { getAppList } from './lib/store.js';
@@ -28,6 +29,9 @@ app.use(express.static(path.join(ROOT, 'public')));
 // ─── API Routes ──────────────────────────────────────────────
 app.use('/api', deployRouter);
 app.use('/api', appsRouter);
+
+// ─── /launch skill distribution (install page, installers, SKILL.md) ──
+app.use(skillRouter);
 
 // ─── Serve app static files ──────────────────────────────────
 // Each app lives at /apps/:name/ and is a self-contained SPA

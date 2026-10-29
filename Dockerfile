@@ -15,6 +15,7 @@ COPY --from=build /app/package.json ./
 COPY --from=build /app/README.md ./
 COPY --from=build /app/docs ./docs
 COPY --from=build /app/public ./public
+COPY --from=build /app/.claude/skills ./.claude/skills
 RUN mkdir -p apps data
 EXPOSE 4000
 CMD ["node", "dist/index.js"]

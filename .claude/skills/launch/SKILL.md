@@ -22,13 +22,21 @@ The only files the skill ever writes are:
 
 1. A **temp zip** in `os.tmpdir()`, deleted in the cleanup step.
 2. The **`~/.launchpad/apps.json`** cache in the user's home directory.
+3. The **`~/.launchpad/token`** file, only if the user chooses to save a deploy token (Step 9).
 
 Running the framework's normal build (which writes to `dist/`, `build/`, etc.) is fine — that's the framework's behavior, not the skill's, and those dirs are typically gitignored by the user already. The skill just *reads* the build output.
 
 ## Configuration
 
-- **Launchpad server URL** — default `https://launchpad.example.com`, overridden by the `LAUNCHPAD_SERVER_URL` environment variable if set. Resolve this once at the start and reuse it.
+- **Launchpad server URL** — default `https://launchpad.inspiredeffect.com`, overridden by the `LAUNCHPAD_SERVER_URL` environment variable if set. Resolve this once at the start and reuse it.
+- **Deploy token** — resolve once at the start, first match wins:
+  1. The `LAUNCHPAD_DEPLOY_TOKEN` environment variable.
+  2. A `LAUNCHPAD_DEPLOY_TOKEN=` line in `.env` in the current working directory, **if** the working directory is the Launchpad repo (it contains `.claude/skills/launch/SKILL.md`). This is the normal case for the Launchpad owner, who runs `/launch <path>` from here against any site.
+  3. The contents of `~/.launchpad/token` (for people who installed the skill from `<LAUNCHPAD_SERVER_URL>/skill`).
+
+  Never print, echo, or log the token — read it inside the same shell command that uses it (e.g. `TOKEN=$(grep '^LAUNCHPAD_DEPLOY_TOKEN=' .env | cut -d= -f2-)`).
 - **Cache file location** — `~/.launchpad/apps.json`. Single JSON object keyed by absolute app path. Create the `~/.launchpad/` directory if it doesn't exist.
+- **Updating this skill** — it was installed from the Launchpad server. To get the latest version, re-run the install command from `<LAUNCHPAD_SERVER_URL>/skill`.
 
 ## Workflow
 
@@ -108,6 +116,15 @@ The full **folder** sent to the API will be `<team>/<folder-slug>`.
 
 **Creator** — derive from `git config user.name` run inside the app directory. If it returns nothing, fall back to the user's system username or prompt.
 
+**Build-time environment variables.** Launchpad serves static files only — there is no backend next to the app. Apps that call an API usually get its address from a build-time variable. Look for them (skip if the cache already has `buildEnv`):
+
+- Vite: `import.meta.env.VITE_*` in `src/`; CRA: `process.env.REACT_APP_*`; also `.env.example`, `.env.production`, `.env` in the app dir.
+- Pay particular attention to API base-URL variables (e.g. `VITE_API_BASE_URL`, `REACT_APP_API_URL`), and to code that calls a relative path like `fetch('/api/...')`.
+
+For each variable found, ask the user for the production value. For an API base URL, it must be the **absolute URL of a deployed backend** (e.g. `https://my-api.herokuapp.com`) — a relative `/api` would hit Launchpad, not their server, and their backend must allow cross-origin requests (CORS). If the code calls relative `/api/...` with no override variable, warn that those calls will fail on Launchpad.
+
+Store answers as `buildEnv` (an object of name → value). They're passed to the build as environment variables in Step 7 — **never written to a file in the app**. These values are embedded in the public JavaScript bundle, so never accept secrets (API keys, tokens) here; refuse and explain if one is offered.
+
 ### Step 5: Confirm details
 
 Show a summary and let the user adjust before proceeding:
@@ -123,10 +140,13 @@ Ready to deploy to Launchpad:
   Name:         Q3 Launch Landing
   Description:  Promotional landing page for the Q3 product launch
   Creator:      Jane Doe
+  Build env:    VITE_API_BASE_URL=https://landing-api.herokuapp.com
   Deploy URL:   https://launchpad.example.com/apps/marketing/landing-page/
 
 Say "yes" to build and deploy, or tell me what you'd like to change.
 ```
+
+Omit the `Build env:` line when `buildEnv` is empty.
 
 For manual mode, replace `Build:` with `Include:` and show the patterns or directory.
 
@@ -178,6 +198,21 @@ If you find any, warn the user:
 
 If they say no, stop. If they say yes, continue and accept the 404s.
 
+**Client-side routers (all build modes).** The base-path flags above fix asset URLs, but a client-side router also needs to know it lives under `/apps/<folder>/`, or no route matches and the page renders blank or shows the app's 404. Search `src/` for:
+
+| Router | Pattern | Needs |
+|---|---|---|
+| React Router | `<BrowserRouter` or `createBrowserRouter(` | `basename` set |
+| Vue Router | `createWebHistory(` | a base argument |
+
+If a router is found without a base, warn the user and show the exact one-line fix **in their source** (this skill does not edit it):
+
+- Vite + React Router: `<BrowserRouter basename={import.meta.env.BASE_URL}>` (or `createBrowserRouter(routes, { basename: import.meta.env.BASE_URL })`)
+- CRA + React Router: `<BrowserRouter basename={process.env.PUBLIC_URL}>`
+- Vite + Vue Router: `createWebHistory(import.meta.env.BASE_URL)`
+
+These read the base path the build already sets, so the app keeps working unchanged in local dev. `HashRouter`, `createHashRouter`, and Angular's router (which uses `--base-href`) need nothing. Ask whether to continue anyway; if not, stop so they can apply the fix and re-run `/launch`.
+
 ### Step 7: Run the build
 
 **Skip this step in manual mode** (no build to run; the source files themselves are the bundle).
@@ -187,6 +222,8 @@ For Vite / CRA / Angular, execute the **effective build command** from Step 6:
 ```bash
 cd <appPath> && <effectiveBuildCommand>
 ```
+
+Prefix the command with any `buildEnv` variables from Step 4 (e.g. `VITE_API_BASE_URL=https://… npx vite build --base=…`; in PowerShell set `$env:NAME = '…'` first). Shell environment variables take precedence over `.env` files.
 
 Show the build output to the user. If it fails, stop and report the error. Don't try to fix it automatically.
 
@@ -231,14 +268,15 @@ curl -X POST <LAUNCHPAD_SERVER_URL>/api/deploy \
   -F "description=<description>"
 ```
 
-If the `LAUNCHPAD_DEPLOY_TOKEN` environment variable is set, add `-H "Authorization: Bearer $LAUNCHPAD_DEPLOY_TOKEN"` to the request. Never print the token.
+If a deploy token was resolved (see Configuration), add `-H "Authorization: Bearer <token>"` to the request. Pass it so it doesn't appear in your output — e.g. read it into a shell variable from the env var or `~/.launchpad/token` inside the same command — and never print it.
 
 Important notes:
 
 - **Sanitize Unicode in `name` and `description`.** Replace em dashes (`—`), curly quotes, and other non-ASCII characters with ASCII equivalents before passing to `curl`. Git Bash on Windows corrupts non-ASCII characters in `-F` arguments.
 - **Parse the JSON response.** On success, it contains `{ success: true, folder, name, url, message }`. On failure, it returns a non-2xx with `{ error }`.
-- **If you get `401`**, the server requires a deploy token. Tell the user to set `LAUNCHPAD_DEPLOY_TOKEN` and stop.
-- **If you get `413 Payload Too Large`**, the bundle is over Launchpad's upload cap (100 MB by default, set by the server's `MAX_UPLOAD_MB`). Tell the user and stop. See [docs/scaling.md](../../docs/scaling.md).
+- **If you get `401`**, the server requires a deploy token and none (or a wrong one) was sent. Tell the user they need the team's Launchpad deploy token from whoever runs Launchpad. Offer to save it so they're not asked again — to the Launchpad repo's `.env` as `LAUNCHPAD_DEPLOY_TOKEN=<token>` when running from that repo (it's gitignored), otherwise to `~/.launchpad/token`. Ask first; if they agree, have them paste it and write the file without echoing its contents. Then retry the upload once. If they'd rather not save it, tell them they can set `LAUNCHPAD_DEPLOY_TOKEN` instead, and stop.
+- **If you get `413 Payload Too Large`**, the bundle is over Launchpad's upload cap (100 MB by default; the server's `MAX_UPLOAD_MB` setting). Tell the user and stop.
+- **If you get `502`** and the error mentions the archive, Launchpad couldn't save a durable copy of the app. Show the error message; the previous version (if any) is still live.
 
 ### Step 10: Update the cache
 
@@ -254,7 +292,8 @@ Write or update the entry in `~/.launchpad/apps.json` keyed by absolute app path
     "framework": "<framework>",
     "buildCommand": "<buildCommand or null>",
     "buildDir": "<buildDir or null>",
-    "includePatterns": ["...", "..."] or null
+    "includePatterns": ["...", "..."] or null,
+    "buildEnv": { "VITE_API_BASE_URL": "https://..." } or {}
   }
 }
 ```

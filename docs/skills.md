@@ -6,7 +6,27 @@ Launchpad ships Claude Code skills so teams can deploy apps with a single comman
 
 Deploys an app from a local build directory to Launchpad. Detects framework (Vite, CRA, Angular), applies sensible defaults, prompts for missing metadata, builds, zips, uploads, returns the deploy URL.
 
-Lives at [.claude/skills/launch/skill.md](../.claude/skills/launch/skill.md).
+Source: [.claude/skills/launch/SKILL.md](../.claude/skills/launch/SKILL.md).
+
+## Installing (for anyone deploying apps)
+
+Launchpad serves the skill itself, so teams don't need this repo. The install page is `<launchpad-url>/skill` (production: https://launchpad.inspiredeffect.com/skill):
+
+```bash
+# macOS / Linux / Git Bash
+curl -fsSL https://launchpad.inspiredeffect.com/skill/install.sh | sh
+```
+
+```powershell
+# Windows PowerShell
+irm https://launchpad.inspiredeffect.com/skill/install.ps1 | iex
+```
+
+Either writes one file, `~/.claude/skills/launch/SKILL.md`, making `/launch` available in every project. Re-running updates it.
+
+**The right endpoint, automatically.** When serving `SKILL.md`, Launchpad replaces the skill's default server URL with its own origin ([src/routes/skill.ts](../src/routes/skill.ts)), so a skill installed from an instance always deploys back to that instance. `LAUNCHPAD_SERVER_URL` still overrides it.
+
+**Deploy token.** The skill uses, in order: the `LAUNCHPAD_DEPLOY_TOKEN` environment variable; `LAUNCHPAD_DEPLOY_TOKEN` in this repo's `.env` when run from here (the owner's setup — one token, one place; see [deployment.md](./deployment.md#deploying-apps-to-production)); or `~/.launchpad/token` for installed copies. On a `401` it offers to save the token, so non-engineers never need to set environment variables.
 
 ## Read-only contract
 
@@ -18,18 +38,19 @@ The only files the skill ever writes:
 
 1. A **temp zip** in `os.tmpdir()` — deleted in the cleanup step.
 2. The **`~/.launchpad/apps.json`** cache in the user's home directory (not the target repo).
+3. The **`~/.launchpad/token`** file, only if the user agrees to save a deploy token.
 
 This contract protects the user's source tree from accidental churn or merge conflicts with parallel work in the same repo.
 
 ## How it's run
 
-Skills live in `.claude/skills/` inside this repo. Engineers clone Launchpad, `cd` into it, and invoke the skill against an app path elsewhere on disk:
+Once installed (or from inside this repo, where `.claude/skills/` provides it), invoke the skill against an app path anywhere on disk:
 
 ```
 /launch ~/projects/my-app
 ```
 
-The skill resolves the path, reads `package.json` (if present), and proceeds. Default Launchpad server URL: `https://launchpad.example.com`, override via `LAUNCHPAD_SERVER_URL`.
+The skill resolves the path, reads `package.json` (if present), and proceeds. Default Launchpad server URL: `https://launchpad.inspiredeffect.com` (the production instance, see [deployment.md](./deployment.md)), override via `LAUNCHPAD_SERVER_URL`.
 
 ## Framework detection
 

@@ -77,11 +77,13 @@ async function handleDeploy(req: Request, res: Response): Promise<void> {
   let staged: string | null = null;
 
   try {
-    const folder = normalizeFolder(req.body.folder);
-    const name = String(req.body.name ?? folder).trim();
-    const team = String(req.body.team ?? '').trim();
-    const creator = String(req.body.creator ?? 'unknown').trim();
-    const description = String(req.body.description ?? '').trim();
+    // Non-multipart requests leave req.body undefined; treat that as "no fields" so it's a 400, not a 500.
+    const body = req.body ?? {};
+    const folder = normalizeFolder(body.folder);
+    const name = String(body.name ?? folder).trim();
+    const team = String(body.team ?? '').trim();
+    const creator = String(body.creator ?? 'unknown').trim();
+    const description = String(body.description ?? '').trim();
 
     if (!file) {
       res.status(400).json({ error: 'No file uploaded. Send a zipped dist/ folder as "file".' });
