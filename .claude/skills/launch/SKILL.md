@@ -57,9 +57,9 @@ Cache entry shape:
 ```json
 {
   "/absolute/path/to/app": {
-    "team": "marketing",
+    "team": "Product Team",
     "name": "Q3 Launch Landing",
-    "folder": "marketing/landing-page",
+    "folder": "product-team/landing-page",
     "description": "Promotional landing page for the Q3 product launch",
     "framework": "vite",
     "buildCommand": "npm run build",
@@ -107,12 +107,12 @@ Parse the response:
 
 Prompt the user for the following. Pre-populate defaults where you can.
 
-- **Team** — short kebab-case slug (e.g., `marketing`, `growth`, `platform`, `engineering`). No default.
+- **Team** — on a first deploy, always ask, even when other defaults are clear (repeat deploys show the cached team in Step 5, where it can be changed): "What team owns this app? (default: Product Team)". Default: **`Product Team`**. This is the display name shown on the dashboard, which groups apps by team. Its kebab-cased form is the **team slug** used in the URL (`Product Team` → `product-team`).
 - **Folder slug** — the URL slug under the team (e.g., `landing-page`). Default: kebab-cased name of the app directory.
 - **Display name** — human-readable (e.g., "Q3 Launch Landing"). Default: from `package.json`'s `name` field (title-cased) if present, else the directory name.
 - **Description** — one-line description. Default: from `package.json`'s `description` field if present.
 
-The full **folder** sent to the API will be `<team>/<folder-slug>`.
+The full **folder** sent to the API will be `<team-slug>/<folder-slug>` (e.g. `product-team/landing-page`); the `team` field carries the display name.
 
 **Creator** — derive from `git config user.name` run inside the app directory. If it returns nothing, fall back to the user's system username or prompt.
 
@@ -135,13 +135,13 @@ Ready to deploy to Launchpad:
   Path:         /home/jane/projects/landing-page
   Framework:    vite
   Build:        npm run build  →  dist/
-  Team:         marketing
-  Folder:       marketing/landing-page
+  Team:         Product Team
+  Folder:       product-team/landing-page
   Name:         Q3 Launch Landing
   Description:  Promotional landing page for the Q3 product launch
   Creator:      Jane Doe
   Build env:    VITE_API_BASE_URL=https://landing-api.herokuapp.com
-  Deploy URL:   https://launchpad.example.com/apps/marketing/landing-page/
+  Deploy URL:   https://launchpad.example.com/apps/product-team/landing-page/
 
 Say "yes" to build and deploy, or tell me what you'd like to change.
 ```
@@ -261,7 +261,7 @@ POST the zip to the deploy endpoint:
 ```bash
 curl -X POST <LAUNCHPAD_SERVER_URL>/api/deploy \
   -F "file=@$TMP_ZIP" \
-  -F "folder=<team>/<folder-slug>" \
+  -F "folder=<team-slug>/<folder-slug>" \
   -F "name=<display-name>" \
   -F "team=<team>" \
   -F "creator=<creator>" \
@@ -287,7 +287,7 @@ Write or update the entry in `~/.launchpad/apps.json` keyed by absolute app path
   "/absolute/path/to/app": {
     "team": "<team>",
     "name": "<display-name>",
-    "folder": "<team>/<folder-slug>",
+    "folder": "<team-slug>/<folder-slug>",
     "description": "<description>",
     "framework": "<framework>",
     "buildCommand": "<buildCommand or null>",
@@ -344,9 +344,9 @@ User: /launch ~/projects/landing-page
 
 Claude: Detected framework: vite (vite.config.ts found, vite in deps)
 
-        What team owns this app? (e.g., marketing, growth, platform)
+        What team owns this app? (default: Product Team)
 
-User: marketing
+User: (presses enter)
 
 Claude: Defaults to use:
           Folder slug: landing-page
@@ -358,13 +358,13 @@ Claude: Defaults to use:
 
           Path:         /home/jane/projects/landing-page
           Framework:    vite
-          Build:        npx vite build --base=/apps/marketing/landing-page/  →  dist/
-          Team:         marketing
-          Folder:       marketing/landing-page
+          Build:        npx vite build --base=/apps/product-team/landing-page/  →  dist/
+          Team:         Product Team
+          Folder:       product-team/landing-page
           Name:         Q3 Launch Landing
           Description:  Promotional landing page for the Q3 product launch
           Creator:      Jane Doe
-          Deploy URL:   https://launchpad.example.com/apps/marketing/landing-page/
+          Deploy URL:   https://launchpad.example.com/apps/product-team/landing-page/
 
         Note: --base flag overrides vite.config.ts at build time; your config file is not modified.
 
@@ -378,5 +378,5 @@ Claude: Building... ✓ (8.2s)
         Cached config to ~/.launchpad/apps.json.
 
         Your app is live!
-        Open: https://launchpad.example.com/apps/marketing/landing-page/
+        Open: https://launchpad.example.com/apps/product-team/landing-page/
 ```
