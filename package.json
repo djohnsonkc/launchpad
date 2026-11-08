@@ -1,28 +1,19 @@
 {
   "name": "launchpad",
   "version": "1.0.0",
-  "description": "Lightweight deployment server for applications. Hosts any pre-built static bundle at a unique URL — framework-agnostic, no SDK required.",
+  "description": "Static portal for Launchpad — TypeScript-rendered HTML, deployed to GitHub Pages.",
   "type": "module",
   "engines": {
     "node": "22.x"
   },
   "scripts": {
-    "dev": "tsx watch src/index.ts",
-    "build": "tsc",
-    "start": "node dist/index.js"
+    "build": "tsx src/build.ts",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@types/unzipper": "^0.10.11",
-    "cors": "^2.8.5",
-    "express": "^5.1.0",
-    "marked": "^18.0.5",
-    "multer": "^2.0.0",
-    "unzipper": "^0.12.3"
+    "marked": "^18.0.5"
   },
   "devDependencies": {
-    "@types/cors": "^2.8.17",
-    "@types/express": "^5.0.0",
-    "@types/multer": "^2.0.0",
     "@types/node": "^22.15.0",
     "tsx": "^4.19.0",
     "typescript": "~5.9.3"

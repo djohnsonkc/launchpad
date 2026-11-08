@@ -1,3 +1,5 @@
+import { url } from '../lib/base.js';
+
 export type NavSlug = 'home' | 'product' | 'tech-leads' | 'exec';
 
 interface LayoutOptions {
@@ -9,13 +11,13 @@ interface LayoutOptions {
 }
 
 // Rocket icon served from public/rocket.svg — used for both the nav badge and favicon.
-const ROCKET_ICON_URL = '/rocket.svg';
+const ROCKET_ICON_URL = url('/rocket.svg');
 
 const NAV_ITEMS: { slug: NavSlug; label: string; href: string }[] = [
-  { slug: 'home', label: 'Home', href: '/' },
-  { slug: 'product', label: 'Product Teams', href: '/pitch/product' },
-  { slug: 'tech-leads', label: 'Engineers', href: '/pitch/tech-leads' },
-  { slug: 'exec', label: 'Executives', href: '/pitch/exec' },
+  { slug: 'home', label: 'Home', href: url('/') },
+  { slug: 'product', label: 'Product Teams', href: url('/pitch/product') },
+  { slug: 'tech-leads', label: 'Engineers', href: url('/pitch/tech-leads') },
+  { slug: 'exec', label: 'Executives', href: url('/pitch/exec') },
 ];
 
 export function layout({ title, content, active, bodyExtras = '' }: LayoutOptions): string {
@@ -133,7 +135,7 @@ export function layout({ title, content, active, bodyExtras = '' }: LayoutOption
   <nav class="bg-surface-base border-b border-[var(--pc-border-color)] sticky top-0 z-10">
     <div class="max-w-4xl mx-auto px-6 py-3">
       <div class="flex items-center justify-between gap-4">
-        <a href="/" class="flex items-center gap-2 no-underline text-[var(--pc-font-color)] shrink-0">
+        <a href="${url('/')}" class="flex items-center gap-2 no-underline text-[var(--pc-font-color)] shrink-0">
           <img src="${ROCKET_ICON_URL}" alt="" class="rocket-icon" width="32" height="32" style="display:block">
           <span class="text-lg font-semibold">Launchpad</span>
         </a>

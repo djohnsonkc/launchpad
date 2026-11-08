@@ -1,48 +1,44 @@
-name: Build and Deploy
+name: Deploy to GitHub Pages
 
 on:
+  push:
+    branches: [github-pages]
   workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
 
 jobs:
   build:
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Login to GHCR
-        uses: docker/login-action@v3
+      - uses: actions/setup-node@v4
         with:
-          registry: ghcr.io
-          username: ${{ github.repository_owner }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          node-version: "22"
+          cache: "npm"
 
-      - name: Build and Push Image
-        run: |
-          OWNER="${{ github.repository_owner }}"
-          OWNER_LOWER=$(echo "$OWNER" | tr '[:upper:]' '[:lower:]')
-          NAME="launchpad"
-          TAG="latest"
-          IMAGE="ghcr.io/${OWNER_LOWER}/${NAME}:${TAG}"
+      - run: npm ci
 
-          echo "Building and pushing: ${IMAGE}"
-          docker build . --tag ${IMAGE}
-          docker push ${IMAGE}
+      - run: npm run build
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
 
   deploy:
-    runs-on: [self-hosted, Windows]
     needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Deploy Launchpad
-        shell: powershell
-        run: |
-          .\scripts\deploy.ps1 `
-            -WebhookUrl "${{ secrets.PORTAINER_WEBHOOK_URL }}" `
-            -Tag "latest" `
-            -ServiceName "launchpad"
+      - id: deployment
+        uses: actions/deploy-pages@v4
