@@ -114,7 +114,68 @@ Write-Host 'Restart Claude Code, then run: /launch <path-to-your-app>'
   console.log(`Built ${apps.length} app${apps.length === 1 ? '' : 's'} → ${DIST}`);
 }
 
-main().catch(err => {
-  console.error('Build failed:', err);
-  process.exit(1);
-});
+async function dev(): Promise<void> {
+  const { createServer } = await import('node:http');
+  const { createReadStream } = await import('node:fs');
+  const { statSync } = await import('node:fs');
+  const { watch } = await import('node:fs');
+
+  const PORT = parseInt(process.env.PORT ?? '3000', 10);
+  const BASE = process.env.BASE_PATH ?? '/launchpad';
+
+  await main();
+
+  // Debounced rebuild on source/content changes
+  let rebuildTimer: ReturnType<typeof setTimeout> | null = null;
+  function scheduleRebuild(label: string) {
+    if (rebuildTimer) clearTimeout(rebuildTimer);
+    rebuildTimer = setTimeout(() => {
+      console.log(`[dev] ${label} changed — rebuilding...`);
+      main().catch(console.error);
+    }, 150);
+  }
+
+  watch(path.join(ROOT, 'src'),  { recursive: true }, (_, f) => scheduleRebuild(`src/${f}`));
+  watch(path.join(ROOT, 'docs'), { recursive: true }, (_, f) => scheduleRebuild(`docs/${f}`));
+  watch(path.join(ROOT, 'apps.json'),               (_,  f) => scheduleRebuild(f ?? 'apps.json'));
+
+  const MIME: Record<string, string> = {
+    '.html': 'text/html; charset=utf-8',
+    '.svg':  'image/svg+xml',
+    '.json': 'application/json',
+    '.md':   'text/plain',
+    '.sh':   'text/plain',
+    '.ps1':  'text/plain',
+  };
+
+  createServer((req, res) => {
+    // Strip the base prefix so /launchpad/pitch/product → /pitch/product
+    let p = (req.url ?? '/').split('?')[0];
+    if (BASE && p.startsWith(BASE)) p = p.slice(BASE.length) || '/';
+    if (!p.startsWith('/')) p = '/' + p;
+
+    // Directory → index.html
+    let filePath = path.join(DIST, p);
+    if (!path.extname(filePath)) filePath = path.join(filePath, 'index.html');
+
+    try {
+      const stat = statSync(filePath);
+      if (!stat.isFile()) throw new Error();
+      res.writeHead(200, { 'Content-Type': MIME[path.extname(filePath)] ?? 'application/octet-stream' });
+      createReadStream(filePath).pipe(res);
+    } catch {
+      res.writeHead(404).end('Not found');
+    }
+  }).listen(PORT, () => {
+    console.log(`[dev] http://localhost:${PORT}${BASE}/`);
+  });
+}
+
+if (process.argv.includes('--watch')) {
+  dev().catch(err => { console.error(err); process.exit(1); });
+} else {
+  main().catch(err => {
+    console.error('Build failed:', err);
+    process.exit(1);
+  });
+}
