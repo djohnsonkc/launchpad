@@ -172,7 +172,15 @@ export function layout({ title, content, active, bodyExtras = '' }: LayoutOption
 
   ${content}
 
+  <footer style="margin-top: 3rem; border-top: 1px solid var(--pc-border-color); background: var(--pc-surface-base);">
+    <div style="max-width: 56rem; margin: 0 auto; padding: 1.5rem 1.5rem; text-align: center; font-size: 0.75rem; color: var(--pc-text-secondary); display: flex; flex-direction: column; gap: 0.25rem;">
+      <span>&copy; <span id="footer-year"></span> Inspired Effect, LLC. All rights reserved.</span>
+      <span>Launchpad&trade; is a trademark of Inspired Effect, LLC.</span>
+    </div>
+  </footer>
+
   <script>
+    document.getElementById('footer-year').textContent = new Date().getFullYear();
     function applyTheme(dark) {
       document.documentElement.classList.toggle('dark', dark);
       document.getElementById('icon-sun').classList.toggle('hidden', !dark);
